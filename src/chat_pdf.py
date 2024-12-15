@@ -18,8 +18,6 @@ def get_model(model_name=None):
         logger.error(f"モデルの初期化に失敗: {e}")
         return None
 
-columns = config.columns
-
 def read_pdf(file_path):
     with open(file_path, "rb") as file:
         reader = PyPDF2.PdfReader(file)
@@ -57,9 +55,11 @@ def extract_sections_from_markdown(text):
     if current_section and current_content:
         sections[current_section] = '\n'.join(current_content).strip()
     
-    # Keywords を配列に変換
+    # Keywords を配列に変換し、整形
     if 'Keywords' in sections:
-        sections['Keywords'] = [k.strip() for k in sections['Keywords'].split(',')]
+        # カンマまたはセミコロンで分割し、前後の空白を削除
+        keywords = re.split(r'[,;]', sections['Keywords'])
+        sections['Keywords'] = [k.strip() for k in keywords if k.strip()]
     
     return sections
 

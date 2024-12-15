@@ -14,8 +14,12 @@ headers = {
 
 # データベースID
 database_id = config.database_id
-# 追加したいカラムのリスト
-columns_to_add = config.columns
+
+# 必要な列のみを定義
+required_columns = {
+    "Name": config.column_configs["Name"],
+    "Keywords": config.column_configs["Keywords"]
+}
 
 # データベースの既存カラムを取得
 def get_database_properties(database_id):
@@ -51,27 +55,44 @@ def add_column_to_database(database_id, column_name):
         print(response.text)
 
 def initialize_database():
-    """データベースを初期化し、必要なカラムを追加する"""
+    """データベースを初期化し、必要な列のみを追加する"""
     existing_columns = get_database_properties(database_id)
     
-    # 初期化が必要かチェック
-    all_exists = all(column in existing_columns for column in columns_to_add)
+    # 必要な列が全て存在するかチェック
+    all_exists = all(column in existing_columns for column in required_columns.keys())
     if all_exists:
         return False
     
-    # カラムの追加処理
-    for column in columns_to_add:
-        if column not in existing_columns:
-            add_column_to_database(database_id, column)
+    # 必要な列のみを追加
+    for column_name, column_config in required_columns.items():
+        if column_name not in existing_columns:
+            property_config = {
+                column_config["notion_type"]: column_config["notion_config"]
+            }
+            
+            payload = {
+                "properties": {
+                    column_name: property_config
+                }
+            }
+            
+            url = f"https://api.notion.com/v1/databases/{database_id}"
+            response = requests.patch(url, headers=headers, data=json.dumps(payload))
+            
+            if response.status_code == 200:
+                print(f"{column_name} カラムが正常に追加されました。")
+            else:
+                print(f"{column_name} カラムの追加中にエラーが発生しました: {response.status_code}")
+                print(response.text)
     
     return True
 
-# 既存のカラムを取得
-existing_columns = get_database_properties(database_id)
-
-# カラムの追加処理
-for column in columns_to_add:
-    if column not in existing_columns:
-        add_column_to_database(database_id, column)
-    else:
-        print(f"{column} カラムは既に存在します。")
+# メイン実行部分も簡略化
+if __name__ == "__main__":
+    existing_columns = get_database_properties(database_id)
+    
+    for column_name in required_columns:
+        if column_name not in existing_columns:
+            add_column_to_database(database_id, column_name)
+        else:
+            print(f"{column_name} カラムは既に存在します。")

@@ -20,42 +20,95 @@ class NotionSummaryWriter:
         self.notion = Client(auth=self.config.NOTION_API_KEY)
         self.database_id = self.config.database_id
 
-    def _create_toggle_blocks(self, json_data: Dict[str, Any]) -> list:
-        """トグルブロックを生成"""
+    def _sanitize_keyword(self, keyword: str, max_length: int = 100) -> str:
+        """キーワードを制限文字数に収める"""
+        return keyword.strip()[:max_length]
+
+    def _process_keywords(self, keywords: list) -> list:
+        """キーワードリストを処理し、Notionの制限に適合させる"""
+        processed_keywords = []
+        for keyword in keywords:
+            # 空文字列やNoneをスキップ
+            if not keyword or not keyword.strip():
+                continue
+            
+            # キーワードを制限文字数に収める
+            sanitized = self._sanitize_keyword(keyword)
+            if sanitized:
+                processed_keywords.append(sanitized)
+        
+        return processed_keywords
+
+    def _convert_markdown_to_blocks(self, text: str) -> list:
+        """マークダウンテキストをNotionブロックに変換"""
         blocks = []
-        for key, value in json_data.items():
-            blocks.append({
-                "object": "block",
-                "type": "toggle",
-                "toggle": {
-                    "rich_text": [{"type": "text", "text": {"content": key}}],
-                    "children": [{
-                        "object": "block",
-                        "type": "paragraph",
-                        "paragraph": {
-                            "rich_text": [{"type": "text", "text": {"content": str(value)}}]
-                        }
-                    }]
-                }
-            })
+        lines = text.split('\n')
+        
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            
+            # 空行をスキップ
+            if not line:
+                i += 1
+                continue
+                
+            # 見出し
+            if line.startswith('# '):
+                blocks.append({
+                    "object": "block",
+                    "type": "heading_1",
+                    "heading_1": {"rich_text": [{"text": {"content": line[2:]}}]}
+                })
+            elif line.startswith('## '):
+                blocks.append({
+                    "object": "block",
+                    "type": "heading_2",
+                    "heading_2": {"rich_text": [{"text": {"content": line[3:]}}]}
+                })
+            # リスト
+            elif line.startswith('- ') or line.startswith('* '):
+                blocks.append({
+                    "object": "block",
+                    "type": "bulleted_list_item",
+                    "bulleted_list_item": {"rich_text": [{"text": {"content": line[2:]}}]}
+                })
+            # 番号付きリスト
+            elif re.match(r'^\d+\. ', line):
+                blocks.append({
+                    "object": "block",
+                    "type": "numbered_list_item",
+                    "numbered_list_item": {"rich_text": [{"text": {"content": line[line.find('.')+2:]}}]}
+                })
+            # 通常のテキスト
+            else:
+                blocks.append({
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {"rich_text": [{"text": {"content": line}}]}
+                })
+            
+            i += 1
+        
         return blocks
 
-    def _create_notion_properties(self, json_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _create_notion_properties(self, sections: Dict[str, Any]) -> Dict[str, Any]:
         """Notionのプロパティを生成"""
         properties = {}
         for column, config in self.config.column_configs.items():
+            # タイトルとキーワードのみプロパティとして保存
             if config["notion_type"] == "multi_select":
-                properties[column] = {
-                    "multi_select": [{"name": keyword} for keyword in json_data[column]]
-                }
+                if column == "Keywords":
+                    keywords = self._process_keywords(sections[column])
+                    properties[column] = {
+                        "multi_select": [{"name": k} for k in keywords]
+                    }
             elif config["notion_type"] == "title":
                 properties[column] = {
-                    "title": [{"text": {"content": str(json_data[column])}}]
+                    "title": [{"text": {"content": str(sections[column])}}]
                 }
-            else:  # rich_text
-                properties[column] = {
-                    "rich_text": [{"text": {"content": str(json_data[column])}}]
-                }
+            # rich_text型のプロパティは作成しない
+
         return properties
 
     def add_summary(self, pdf_path: str, model_name: Optional[str] = None) -> Optional[bool]:
@@ -73,17 +126,33 @@ class NotionSummaryWriter:
             if sections is None:
                 logger.error("要約の生成に失敗しました")
                 return None
-                
-            logger.info(f"生成された要約セクション: {sections.keys()}")
             
-            # Notionページの作成データを準備
-            new_page_data = {
-                "parent": {"database_id": self.database_id},
-                "properties": self._create_notion_properties(sections),
-                "children": self._create_toggle_blocks(sections)
-            }
+            # プロパティの作成
+            properties = self._create_notion_properties(sections)
+            
+            # 各セクションのコンテンツをブロックに変換
+            all_blocks = []
+            for column, content in sections.items():
+                if column != "Keywords" and column != "Name":
+                    all_blocks.append({
+                        "object": "block",
+                        "type": "heading_2",
+                        "heading_2": {"rich_text": [{"text": {"content": column}}]}
+                    })
+                    all_blocks.extend(self._convert_markdown_to_blocks(str(content)))
+                    all_blocks.append({
+                        "object": "block",
+                        "type": "divider",
+                        "divider": {}
+                    })
 
             # Notionページの作成
+            new_page_data = {
+                "parent": {"database_id": self.database_id},
+                "properties": properties,
+                "children": all_blocks
+            }
+
             response = self.notion.pages.create(**new_page_data)
             logger.info("Notionページの作成に成功しました")
             logger.debug(f"Notionのレスポンス: {response}")
