@@ -56,18 +56,103 @@ class NotionSummaryWriter:
     def _convert_markdown_to_blocks(self, text: str) -> list:
         """マークダウンテキストをNotionブロックに変換"""
         blocks = []
-        lines = text.split('\n')
+        lines = []
+        current_math = []
+        in_display_math = False
+        in_inline_math = False
         
-        i = 0
-        while i < len(lines):
-            line = lines[i].strip()
-            
-            # 空行をスキップ
+        # 行ごとに処理
+        for line in text.split('\n'):
+            line = line.strip()
             if not line:
-                i += 1
                 continue
                 
-            # 見出し
+            # ディスプレイ数式の処理
+            if '$$' in line:
+                if in_display_math:
+                    # 数式の終了
+                    if current_math:
+                        blocks.append({
+                            "object": "block",
+                            "type": "equation",
+                            "equation": {
+                                "expression": '\n'.join(current_math)
+                            }
+                        })
+                        current_math = []
+                    in_display_math = False
+                else:
+                    # 数式の開始
+                    in_display_math = True
+                continue
+
+            # ディスプレイ数式の内容を収集
+            if in_display_math:
+                current_math.append(line)
+                continue
+
+            # インライン数式を含む行の処理
+            if '$' in line:
+                parts = []
+                current_text = ""
+                i = 0
+                while i < len(line):
+                    if line[i:i+2] == '$$':
+                        # ディスプレイ数式は別途処理
+                        i += 2
+                        continue
+                    elif line[i] == '$':
+                        # インライン数式の処理
+                        if in_inline_math:
+                            # 数式の終了
+                            if current_text:
+                                parts.append({
+                                    "type": "equation",
+                                    "content": current_text
+                                })
+                            current_text = ""
+                            in_inline_math = False
+                        else:
+                            # 数式の開始
+                            if current_text:
+                                parts.append({
+                                    "type": "text",
+                                    "content": current_text
+                                })
+                            current_text = ""
+                            in_inline_math = True
+                    else:
+                        current_text += line[i]
+                    i += 1
+
+                # 残りのテキストを追加
+                if current_text:
+                    parts.append({
+                        "type": "text" if not in_inline_math else "equation",
+                        "content": current_text
+                    })
+
+                # 複数のパーツを含む段落ブロックを作成
+                if parts:
+                    blocks.append({
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {
+                            "rich_text": [
+                                {
+                                    "type": "text",
+                                    "text": {"content": part["content"]}
+                                } if part["type"] == "text" else {
+                                    "type": "equation",
+                                    "equation": {"expression": part["content"]}
+                                }
+                                for part in parts
+                            ]
+                        }
+                    })
+                continue
+
+            # 通常のマークダウン要素の処理
             if line.startswith('# '):
                 blocks.append({
                     "object": "block",
@@ -80,30 +165,35 @@ class NotionSummaryWriter:
                     "type": "heading_2",
                     "heading_2": {"rich_text": [{"text": {"content": line[3:]}}]}
                 })
-            # リスト
             elif line.startswith('- ') or line.startswith('* '):
                 blocks.append({
                     "object": "block",
                     "type": "bulleted_list_item",
                     "bulleted_list_item": {"rich_text": [{"text": {"content": line[2:]}}]}
                 })
-            # 番号付きリスト
             elif re.match(r'^\d+\. ', line):
                 blocks.append({
                     "object": "block",
                     "type": "numbered_list_item",
                     "numbered_list_item": {"rich_text": [{"text": {"content": line[line.find('.')+2:]}}]}
                 })
-            # 通常のテキスト
             else:
                 blocks.append({
                     "object": "block",
                     "type": "paragraph",
                     "paragraph": {"rich_text": [{"text": {"content": line}}]}
                 })
-            
-            i += 1
-        
+
+        # 未完了の数式ブロックを処理
+        if current_math:
+            blocks.append({
+                "object": "block",
+                "type": "equation",
+                "equation": {
+                    "expression": '\n'.join(current_math)
+                }
+            })
+
         return blocks
 
     def _create_notion_properties(self, sections: Dict[str, Any]) -> Dict[str, Any]:
@@ -119,7 +209,7 @@ class NotionSummaryWriter:
 
             if config["notion_type"] == "multi_select":
                 # Keywordsの処理
-                if column == "Keywords":
+                if (column == "Keywords"):
                     keywords = self._process_keywords(sections[column])
                     properties[column] = {
                         "multi_select": [{"name": k} for k in keywords]
