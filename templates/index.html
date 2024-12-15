@@ -44,12 +44,12 @@
 </head>
 <body>
     <h1>論文要約ツール</h1>
-    <p>PDFファイルのアップロードまたはarXiv IDから論文を要約し、Notionに保存します。</p>
+    <p>PDFファイルをアップロードして論文を要約し、Notionに保存します。</p>
 
-    <!-- 共通のモデル選択部分 -->
+    <!-- モデル選択部分 -->
     <div class="model-selector">
         <h3>使用するモデルを選択</h3>
-        <select id="shared-model" onchange="updateModels(this.value)">
+        <select id="shared-model" onchange="updateModel(this.value)">
             <option value="gemini-pro" {% if default_model == "gemini-pro" %}selected{% endif %}>Gemini Pro (推奨)</option>
             <option value="gemini-1.5-flash-002" {% if default_model == "gemini-1.5-flash-002" %}selected{% endif %}>Gemini 1.5 Flash</option>
         </select>
@@ -69,26 +69,12 @@
         </form>
     </div>
 
-    <div class="form-section">
-        <h2>arXiv IDから要約</h2>
-        <form action="/get-paper" method="post">
-            <div class="form-row">
-                <input type="text" name="paper_id" placeholder="例: 2302.00083" required>
-            </div>
-            <input type="hidden" name="model_name" id="arxiv-model">
-            <div class="form-row">
-                <input type="submit" value="要約を開始" class="submit-button">
-            </div>
-        </form>
-    </div>
-
     <script>
-        function updateModels(value) {
+        function updateModel(value) {
             document.getElementById('pdf-model').value = value;
-            document.getElementById('arxiv-model').value = value;
         }
         // 初期値を設定
-        updateModels(document.getElementById('shared-model').value);
+        updateModel(document.getElementById('shared-model').value);
     </script>
 </body>
 </html>
