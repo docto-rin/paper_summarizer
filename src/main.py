@@ -1,11 +1,12 @@
-from fastapi import FastAPI, Form, UploadFile, File
+from fastapi import FastAPI, Form, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
-from .add_notion import add_summary2notion  # 相対インポートを削除
+from .add_notion import add_summary2notion
 import os
 import logging
-from . import config  # configのインポートを修正
+from . import config
+from .add_columns import initialize_database
 
 # ロギングの設定
 logging.basicConfig(level=logging.INFO)
@@ -57,3 +58,14 @@ async def upload_pdf(
         output = f"エラーが発生しました: {str(e)}"
     
     return templates.TemplateResponse("result.html", {"request": request, "output": output})
+
+@app.post("/initialize-db")
+async def initialize_notion_db():
+    try:
+        result = initialize_database()
+        if result:
+            return {"message": "データベースのセットアップが完了しました"}
+        return {"message": "データベースは既にセットアップされています"}
+    except Exception as e:
+        logger.error(f"データベースセットアップエラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

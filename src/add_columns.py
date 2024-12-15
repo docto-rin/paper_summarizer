@@ -1,6 +1,6 @@
 import requests
 import json
-import config
+from . import config
 
 # NotionのAPIトークン
 NOTION_API_TOKEN = config.NOTION_API_KEY
@@ -54,6 +54,22 @@ def add_column_to_database(database_id, column_name):
     else:
         print(f"{column_name} カラムの追加中にエラーが発生しました: {response.status_code}")
         print(response.text)
+
+def initialize_database():
+    """データベースを初期化し、必要なカラムを追加する"""
+    existing_columns = get_database_properties(database_id)
+    
+    # 初期化が必要かチェック
+    all_exists = all(column in existing_columns for column in columns_to_add)
+    if all_exists:
+        return False
+    
+    # カラムの追加処理
+    for column in columns_to_add:
+        if column not in existing_columns:
+            add_column_to_database(database_id, column)
+    
+    return True
 
 # 既存のカラムを取得
 existing_columns = get_database_properties(database_id)

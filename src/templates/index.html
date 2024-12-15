@@ -40,11 +40,56 @@
             color: #666;
             margin-top: 5px;
         }
+        .setup-section {
+            margin-top: 20px;
+            text-align: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        .setup-button {
+            background-color: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .setup-button:hover {
+            background-color: #5a6268;
+        }
+        .info-text {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .loading {
+            opacity: 0.7;
+            cursor: not-allowed;
+            position: relative;
+        }
+        .loading::after {
+            content: '...';
+            animation: dots 1s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        .form-status {
+            display: none;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>論文要約ツール</h1>
-    <p>PDFファイルをアップロードして論文を要約し、Notionに保存します。</p>
+    <p>PDFファイルをアップロードして論文をAI要約し、Notionに保存します。</p>
 
     <!-- モデル選択部分 -->
     <div class="model-selector">
@@ -58,21 +103,64 @@
 
     <div class="form-section">
         <h2>PDFファイルから要約</h2>
-        <form action="/upload-pdf" method="post" enctype="multipart/form-data">
+        <form id="uploadForm" action="/upload-pdf" method="post" enctype="multipart/form-data">
             <div class="form-row">
                 <input type="file" name="pdf_file" accept=".pdf" required>
             </div>
             <input type="hidden" name="model_name" id="pdf-model">
             <div class="form-row">
-                <input type="submit" value="要約を開始" class="submit-button">
+                <input type="submit" value="要約を開始" class="submit-button" id="submitBtn">
+                <div id="uploadStatus" class="form-status">要約を実行中です...</div>
             </div>
         </form>
+    </div>
+
+    <div class="form-section setup-section">
+        <button onclick="initializeDB()" class="setup-button" id="setupBtn">Notionデータベースの初期化をする</button>
+        <div id="setupStatus" class="form-status">セットアップ中...</div>
+        <p class="info-text">※ Notionデータベース作成後、一度だけ実行してください</p>
     </div>
 
     <script>
         function updateModel(value) {
             document.getElementById('pdf-model').value = value;
         }
+        
+        // フォーム送信時の処理
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            const statusDiv = document.getElementById('uploadStatus');
+            
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            statusDiv.style.display = 'block';
+        });
+
+        async function initializeDB() {
+            const setupBtn = document.getElementById('setupBtn');
+            const statusDiv = document.getElementById('setupStatus');
+            
+            if (!confirm('Notionデータベースをセットアップしますか？\n（必要なカラムが追加されます）')) return;
+            
+            setupBtn.classList.add('loading');
+            setupBtn.disabled = true;
+            statusDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('/initialize-db', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                alert(data.message);
+            } catch (error) {
+                alert('セットアップ中にエラーが発生しました: ' + error);
+            } finally {
+                setupBtn.classList.remove('loading');
+                setupBtn.disabled = false;
+                statusDiv.style.display = 'none';
+            }
+        }
+
         // 初期値を設定
         updateModel(document.getElementById('shared-model').value);
     </script>
