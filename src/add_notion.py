@@ -144,8 +144,21 @@ class NotionSummaryWriter:
             # プロパティの作成
             properties = self._create_notion_properties(sections)
             
+            # 目次ブロックを最初に追加
+            all_blocks = [
+                {
+                    "object": "block",
+                    "type": "table_of_contents",
+                    "table_of_contents": {}
+                },
+                {
+                    "object": "block",
+                    "type": "divider",
+                    "divider": {}
+                }
+            ]
+            
             # 各セクションのコンテンツをブロックに変換
-            all_blocks = []
             for column, content in sections.items():
                 if column != "Keywords" and column != "Name":
                     all_blocks.append({
