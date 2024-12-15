@@ -80,6 +80,35 @@ Access http://127.0.0.1:8000 to start using the tool
 - Summaries are generated in Japanese
 - Ensure proper database permissions in Notion
 
+## Advanced Usage
+### Running as a System Service
+1. Copy the service file:
+   ```bash
+   sudo cp paper_summarizer.service /etc/systemd/system/
+   ```
+2. Reload systemd manager configuration:
+   ```bash
+   sudo systemctl daemon-reload
+   ```
+3. Start the service:
+   ```bash
+   sudo systemctl start paper_summarizer
+   ```
+4. Enable the service to start on boot:
+   ```bash
+   sudo systemctl enable paper_summarizer
+   ```
+
+### Checking Logs
+To check the logs of the service, use:
+```bash
+# Access Log
+sudo tail -f /var/log/paper-summarizer/access.log
+
+# Error Log
+sudo tail -f /var/log/paper-summarizer/error.log
+```
+
 ---
 
 <a id="japanese"></a>
@@ -159,3 +188,32 @@ uvicorn src.main:app --reload
 - PDFファイルは英語論文のみ対応
 - 要約結果は日本語で出力
 - Notionのデータベース権限設定を確認すること
+
+## 上級者向け利用方法
+### システムサービスとして実行
+1. サービスファイルをコピー:
+   ```bash
+   sudo cp paper_summarizer.service /etc/systemd/system/
+   ```
+2. systemdマネージャーの設定をリロード:
+   ```bash
+   sudo systemctl daemon-reload
+   ```
+3. サービスを開始:
+   ```bash
+   sudo systemctl start paper_summarizer
+   ```
+4. ブート時にサービスを有効化:
+   ```bash
+   sudo systemctl enable paper_summarizer
+   ```
+
+### ログの確認
+サービスのログを確認するには、以下を使用:
+```bash
+# アクセスログの確認
+sudo tail -f /var/log/paper-summarizer/access.log
+
+# エラーログの確認
+sudo tail -f /var/log/paper-summarizer/error.log
+```
