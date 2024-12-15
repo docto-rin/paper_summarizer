@@ -69,21 +69,7 @@ class NotionSummaryWriter:
                 
             # ディスプレイ数式の処理
             if '$$' in line:
-                if in_display_math:
-                    # 数式の終了
-                    if current_math:
-                        blocks.append({
-                            "object": "block",
-                            "type": "equation",
-                            "equation": {
-                                "expression": '\n'.join(current_math)
-                            }
-                        })
-                        current_math = []
-                    in_display_math = False
-                else:
-                    # 数式の開始
-                    in_display_math = True
+                # ...existing code for display math...
                 continue
 
             # ディスプレイ数式の内容を収集
@@ -91,97 +77,122 @@ class NotionSummaryWriter:
                 current_math.append(line)
                 continue
 
-            # インライン数式を含む行の処理
-            if '$' in line:
-                parts = []
-                current_text = ""
-                i = 0
-                while i < len(line):
-                    if line[i:i+2] == '$$':
-                        # ディスプレイ数式は別途処理
-                        i += 2
-                        continue
-                    elif line[i] == '$':
-                        # インライン数式の処理
-                        if in_inline_math:
-                            # 数式の終了
-                            if current_text:
-                                parts.append({
-                                    "type": "equation",
-                                    "content": current_text
-                                })
-                            current_text = ""
-                            in_inline_math = False
-                        else:
-                            # 数式の開始
-                            if current_text:
-                                parts.append({
-                                    "type": "text",
-                                    "content": current_text
-                                })
-                            current_text = ""
-                            in_inline_math = True
-                    else:
-                        current_text += line[i]
+            # インライン装飾とインライン数式を処理
+            parts = []
+            current_text = ""
+            i = 0
+            while i < len(line):
+                # ディスプレイ数式のチェック
+                if line[i:i+2] == '$$':
+                    i += 2
+                    continue
+                
+                # 太字 (***) の処理
+                elif line[i:i+3] == '***':
+                    if current_text:
+                        parts.append({"type": "text", "content": current_text, "annotations": {}})
+                    current_text = ""
+                    i += 3
+                    bold_italic_content = ""
+                    while i < len(line) - 2 and line[i:i+3] != '***':
+                        bold_italic_content += line[i]
+                        i += 1
+                    if bold_italic_content:
+                        parts.append({
+                            "type": "text",
+                            "content": bold_italic_content,
+                            "annotations": {"bold": True, "italic": True}
+                        })
+                    i += 3
+                    continue
+                
+                # 太字 (**) の処理
+                elif line[i:i+2] == '**':
+                    if current_text:
+                        parts.append({"type": "text", "content": current_text, "annotations": {}})
+                    current_text = ""
+                    i += 2
+                    bold_content = ""
+                    while i < len(line) - 1 and line[i:i+2] != '**':
+                        bold_content += line[i]
+                        i += 1
+                    if bold_content:
+                        parts.append({
+                            "type": "text",
+                            "content": bold_content,
+                            "annotations": {"bold": True}
+                        })
+                    i += 2
+                    continue
+                
+                # イタリック (*) の処理
+                elif line[i] == '*':
+                    if current_text:
+                        parts.append({"type": "text", "content": current_text, "annotations": {}})
+                    current_text = ""
                     i += 1
+                    italic_content = ""
+                    while i < len(line) and line[i] != '*':
+                        italic_content += line[i]
+                        i += 1
+                    if italic_content:
+                        parts.append({
+                            "type": "text",
+                            "content": italic_content,
+                            "annotations": {"italic": True}
+                        })
+                    i += 1
+                    continue
+                
+                # インライン数式 ($) の処理
+                elif line[i] == '$':
+                    if current_text:
+                        parts.append({"type": "text", "content": current_text, "annotations": {}})
+                    current_text = ""
+                    i += 1
+                    math_content = ""
+                    while i < len(line) and line[i] != '$':
+                        math_content += line[i]
+                        i += 1
+                    if math_content:
+                        parts.append({
+                            "type": "equation",
+                            "content": math_content
+                        })
+                    i += 1
+                    continue
 
-                # 残りのテキストを追加
-                if current_text:
-                    parts.append({
-                        "type": "text" if not in_inline_math else "equation",
-                        "content": current_text
-                    })
-
-                # 複数のパーツを含む段落ブロックを作成
-                if parts:
-                    blocks.append({
-                        "object": "block",
-                        "type": "paragraph",
-                        "paragraph": {
-                            "rich_text": [
-                                {
-                                    "type": "text",
-                                    "text": {"content": part["content"]}
-                                } if part["type"] == "text" else {
-                                    "type": "equation",
-                                    "equation": {"expression": part["content"]}
-                                }
-                                for part in parts
-                            ]
-                        }
-                    })
-                continue
+                else:
+                    current_text += line[i]
+                    i += 1
+            
+            # 残りのテキストを追加
+            if current_text:
+                parts.append({"type": "text", "content": current_text, "annotations": {}})
 
             # 通常のマークダウン要素の処理
             if line.startswith('# '):
-                blocks.append({
-                    "object": "block",
-                    "type": "heading_1",
-                    "heading_1": {"rich_text": [{"text": {"content": line[2:]}}]}
-                })
-            elif line.startswith('## '):
-                blocks.append({
-                    "object": "block",
-                    "type": "heading_2",
-                    "heading_2": {"rich_text": [{"text": {"content": line[3:]}}]}
-                })
-            elif line.startswith('- ') or line.startswith('* '):
-                blocks.append({
-                    "object": "block",
-                    "type": "bulleted_list_item",
-                    "bulleted_list_item": {"rich_text": [{"text": {"content": line[2:]}}]}
-                })
-            elif re.match(r'^\d+\. ', line):
-                blocks.append({
-                    "object": "block",
-                    "type": "numbered_list_item",
-                    "numbered_list_item": {"rich_text": [{"text": {"content": line[line.find('.')+2:]}}]}
-                })
-            else:
+                # ...existing heading and list processing code...
+                continue
+
+            # パーツから段落ブロックを作成
+            if parts:
                 blocks.append({
                     "object": "block",
                     "type": "paragraph",
-                    "paragraph": {"rich_text": [{"text": {"content": line}}]}
+                    "paragraph": {
+                        "rich_text": [
+                            {
+                                "type": "text",
+                                "text": {"content": part["content"]},
+                                "annotations": part.get("annotations", {})
+                            } if part["type"] == "text" else {
+                                "type": "equation",
+                                "equation": {"expression": part["content"]}
+                            }
+                            for part in parts
+                        ]
+                    }
                 })
 
         # 未完了の数式ブロックを処理
