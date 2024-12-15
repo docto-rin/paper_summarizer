@@ -15,6 +15,18 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 templates = Jinja2Templates(directory="src/templates")
 
+# 起動時にデータベースの初期化を実行
+@app.on_event("startup")
+async def startup_event():
+    try:
+        result = initialize_database()
+        if result:
+            logger.info("データベースの初期化が完了しました")
+        else:
+            logger.info("データベースは既に初期化されています")
+    except Exception as e:
+        logger.error(f"データベース初期化エラー: {e}")
+
 # papersディレクトリが存在しない場合は作成
 if not os.path.exists('src/papers'):
     os.makedirs('src/papers')
@@ -59,6 +71,7 @@ async def upload_pdf(
     
     return templates.TemplateResponse("result.html", {"request": request, "output": output})
 
+# /initialize-dbエンドポイントは残しておく（APIとして利用可能）
 @app.post("/initialize-db")
 async def initialize_notion_db():
     try:

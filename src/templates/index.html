@@ -40,31 +40,6 @@
             color: #666;
             margin-top: 5px;
         }
-        .setup-section {
-            margin-top: 20px;
-            text-align: center;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-        }
-        .setup-button {
-            background-color: #6c757d;
-            color: white;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9em;
-        }
-        .setup-button:hover {
-            background-color: #5a6268;
-        }
-        .info-text {
-            font-size: 0.8em;
-            color: #666;
-            margin-top: 5px;
-        }
         .loading {
             opacity: 0.7;
             cursor: not-allowed;
@@ -115,12 +90,6 @@
         </form>
     </div>
 
-    <div class="form-section setup-section">
-        <button onclick="initializeDB()" class="setup-button" id="setupBtn">Notionデータベースの初期化をする</button>
-        <div id="setupStatus" class="form-status">セットアップ中...</div>
-        <p class="info-text">※ Notionデータベース作成後、一度だけ実行してください</p>
-    </div>
-
     <script>
         function updateModel(value) {
             document.getElementById('pdf-model').value = value;
@@ -135,31 +104,6 @@
             submitBtn.disabled = true;
             statusDiv.style.display = 'block';
         });
-
-        async function initializeDB() {
-            const setupBtn = document.getElementById('setupBtn');
-            const statusDiv = document.getElementById('setupStatus');
-            
-            if (!confirm('Notionデータベースをセットアップしますか？\n（必要なカラムが追加されます）')) return;
-            
-            setupBtn.classList.add('loading');
-            setupBtn.disabled = true;
-            statusDiv.style.display = 'block';
-            
-            try {
-                const response = await fetch('/initialize-db', {
-                    method: 'POST'
-                });
-                const data = await response.json();
-                alert(data.message);
-            } catch (error) {
-                alert('セットアップ中にエラーが発生しました: ' + error);
-            } finally {
-                setupBtn.classList.remove('loading');
-                setupBtn.disabled = false;
-                statusDiv.style.display = 'none';
-            }
-        }
 
         // 初期値を設定
         updateModel(document.getElementById('shared-model').value);
