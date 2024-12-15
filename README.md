@@ -2,6 +2,8 @@
 
 [English](#english) | [日本語](#japanese)
 
+![paper-summarizer-image](paper-summarizer-image.png)
+
 <a id="english"></a>
 # Paper Summarizer
 
