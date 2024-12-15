@@ -99,6 +99,21 @@ Access http://127.0.0.1:8000 to start using the tool
    sudo systemctl enable paper_summarizer
    ```
 
+### Network Access Setup
+To allow access from any device on your local network:
+
+1. Open port 50000 in firewall:
+```bash
+sudo ufw allow 50000/tcp
+```
+   This allows access from any device on your local network.
+
+2. Access the tool using:
+```
+http://<server-ip>:50000
+```
+   Replace <server-ip> with your server's IP address on the local network.
+
 ### Checking Logs
 To check the logs of the service, use:
 ```bash
@@ -207,6 +222,21 @@ uvicorn src.main:app --reload
    ```bash
    sudo systemctl enable paper_summarizer
    ```
+
+### ネットワークアクセスの設定
+ローカルネットワーク上の任意のデバイスからアクセスできるようにするには:
+
+1. ポート50000を開く:
+```bash
+sudo ufw allow 50000/tcp
+```
+   これにより、ローカルネットワーク上の任意のデバイスからアクセスが可能になります。
+
+2. 以下のURLでアクセス:
+```
+http://<server-ip>:50000
+```
+   <server-ip>の部分は、ローカルネットワーク上のサーバーのIPアドレスに置き換えてください。
 
 ### ログの確認
 サービスのログを確認するには、以下を使用:
