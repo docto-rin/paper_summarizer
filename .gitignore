@@ -8,6 +8,7 @@ venv/
 # Secret keys
 .env
 paper-summarizer.service
+start_server.sh
 
 # tmp folder
 src/papers/
