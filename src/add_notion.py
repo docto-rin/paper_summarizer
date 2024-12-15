@@ -21,11 +21,21 @@ class NotionSummaryWriter:
         self.database_id = self.config.database_id
 
     def _sanitize_keyword(self, keyword: str, max_length: int = 100) -> str:
-        """キーワードを制限文字数に収める"""
-        # 前後の空白、アスタリスク、その他の不要な文字を削除
-        cleaned = re.sub(r'^[\s*]+|[\s*]+$', '', keyword)
-        # 文字数制限を適用
-        return cleaned[:max_length]
+        """
+        キーワードを制限文字数に収め、表記を統一する
+        - 先頭文字を大文字に
+        - 複合語の場合は各単語の先頭文字を大文字に
+        """
+        # 基本的なクリーニング
+        cleaned = keyword.strip()
+        
+        # 複合語を考慮して各単語の先頭を大文字に
+        # 例: "deep learning" → "Deep Learning"
+        # 例: "natural language processing" → "Natural Language Processing"
+        words = cleaned.split()
+        capitalized = ' '.join(word.capitalize() for word in words)
+        
+        return capitalized[:max_length]
 
     def _process_keywords(self, keywords: list) -> list:
         """キーワードリストを処理し、Notionの制限に適合させる"""
@@ -33,15 +43,11 @@ class NotionSummaryWriter:
         seen = set()  # 重複チェック用
 
         for keyword in keywords:
-            # 空文字列やNoneをスキップ
-            if not keyword or not keyword.strip():
+            if not keyword:
                 continue
             
-            # キーワードを制限文字数に収める
             sanitized = self._sanitize_keyword(keyword)
-            
-            # 既に追加済みのキーワードをスキップ（大文字小文字を区別しない）
-            if sanitized.lower() not in seen and sanitized:
+            if sanitized and sanitized.lower() not in seen:
                 processed_keywords.append(sanitized)
                 seen.add(sanitized.lower())
         

@@ -52,8 +52,19 @@ column_configs = {
         "database_property": False  # ページ本文としてのみ表示
     },
     "Keywords": {
-        "prompt": "論文の重要なキーワード（英語）",
+        "prompt": "List 3-5 important technical keywords from the paper in English. Use commas to separate keywords. Example: deep learning, computer vision, neural networks",
         "notion_type": "multi_select",
         "database_property": True  # データベースの列として追加
     }
 }
+
+def create_prompt():
+    """マークダウン形式のプロンプトを作成"""
+    markdown_prompt = """Please summarize the paper in Japanese using the following format, but provide Keywords in English only.
+All sections below must be included in your response, starting with '## ' for each section.
+各セクションの見出しは以下の通りとし、各項目の説明に従って内容を記述してください。
+※ 全てのセクションを必ず含めてください。
+※ Keywordsは必ず英語で記載してください。
+
+"""
+    # ...existing code...
