@@ -22,11 +22,16 @@ class NotionSummaryWriter:
 
     def _sanitize_keyword(self, keyword: str, max_length: int = 100) -> str:
         """キーワードを制限文字数に収める"""
-        return keyword.strip()[:max_length]
+        # 前後の空白、アスタリスク、その他の不要な文字を削除
+        cleaned = re.sub(r'^[\s*]+|[\s*]+$', '', keyword)
+        # 文字数制限を適用
+        return cleaned[:max_length]
 
     def _process_keywords(self, keywords: list) -> list:
         """キーワードリストを処理し、Notionの制限に適合させる"""
         processed_keywords = []
+        seen = set()  # 重複チェック用
+
         for keyword in keywords:
             # 空文字列やNoneをスキップ
             if not keyword or not keyword.strip():
@@ -34,8 +39,11 @@ class NotionSummaryWriter:
             
             # キーワードを制限文字数に収める
             sanitized = self._sanitize_keyword(keyword)
-            if sanitized:
+            
+            # 既に追加済みのキーワードをスキップ（大文字小文字を区別しない）
+            if sanitized.lower() not in seen and sanitized:
                 processed_keywords.append(sanitized)
+                seen.add(sanitized.lower())
         
         return processed_keywords
 

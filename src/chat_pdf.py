@@ -57,8 +57,16 @@ def extract_sections_from_markdown(text):
     
     # Keywords を配列に変換し、整形
     if 'Keywords' in sections:
-        # カンマまたはセミコロンで分割し、前後の空白を削除
-        keywords = re.split(r'[,;]', sections['Keywords'])
+        # 複数の区切り文字（カンマ、セミコロン、アスタリスク）で分割
+        keywords_text = sections['Keywords']
+        # アスタリスクを含む場合は優先的にアスタリスクで分割
+        if '*' in keywords_text:
+            keywords = [k for k in keywords_text.split('*') if k.strip()]
+        else:
+            # それ以外の場合はカンマまたはセミコロンで分割
+            keywords = re.split(r'[,;]', keywords_text)
+        
+        # 空白を削除し、空の要素を除外
         sections['Keywords'] = [k.strip() for k in keywords if k.strip()]
     
     return sections
