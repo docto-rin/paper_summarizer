@@ -1,0 +1,25 @@
+[Unit]
+Description=Paper Summarizer Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Replace with your username
+User=<USERNAME>
+Group=<USERNAME>
+# Replace with your installation path
+WorkingDirectory=/path/to/paper_summarizer
+Environment=PYTHONPATH=/path/to/paper_summarizer
+Environment=PYTHON_ENV=production
+
+ExecStart=/path/to/paper_summarizer/start_server.sh
+
+Restart=always
+RestartSec=5
+
+StandardOutput=append:/var/log/paper-summarizer/access.log
+StandardError=append:/var/log/paper-summarizer/error.log
+
+[Install]
+WantedBy=multi-user.target

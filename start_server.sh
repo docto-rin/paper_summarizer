@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+# エラーハンドリングの設定
+set -o errexit
+set -o nounset
+set -o pipefail
+
+# プロジェクトのルートディレクトリを取得
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 仮想環境のパス
+VENV_PATH="${VIRTUAL_ENV:-$PROJECT_ROOT/venv}"
+
+# 環境セットアップ
+if [ ! -f "$VENV_PATH/bin/python" ]; then
+    echo "仮想環境をセットアップします..."
+    python -m venv "$VENV_PATH"
+    "$VENV_PATH/bin/pip" install -r "$PROJECT_ROOT/requirements.txt"
+fi
+
+# 環境変数の読み込み
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(cat "$PROJECT_ROOT/.env" | grep -v '^#' | xargs)
+fi
+
+# サーバー起動
+cd "$PROJECT_ROOT"
+exec "$VENV_PATH/bin/uvicorn" src.main:app --host 0.0.0.0 --port 8000 --reload
