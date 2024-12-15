@@ -27,7 +27,7 @@ column_configs = {
         "notion_type": "rich_text",
         "notion_config": {}
     },
-    "先行研究と比較して新規性は？": {
+    "新規性は？": {
         "prompt": "既存研究と比較して、どのような新しい点があるのか",
         "notion_type": "rich_text",
         "notion_config": {}
@@ -37,12 +37,12 @@ column_configs = {
         "notion_type": "rich_text",
         "notion_config": {}
     },
-    "有効性はどのように検証された？": {
+    "検証方法は？": {
         "prompt": "実験や評価方法、結果の概要",
         "notion_type": "rich_text",
         "notion_config": {}
     },
-    "課題と議論は？": {
+    "課題は？": {
         "prompt": "研究の限界や今後の課題として挙げられている点",
         "notion_type": "rich_text",
         "notion_config": {}
