@@ -84,7 +84,7 @@ Access http://127.0.0.1:8000 to start using the tool
 ### Running as a System Service
 1. Copy the service file:
    ```bash
-   sudo cp paper_summarizer.service /etc/systemd/system/
+   sudo cp paper-summarizer.service /etc/systemd/system/
    ```
 2. Reload systemd manager configuration:
    ```bash
@@ -92,11 +92,11 @@ Access http://127.0.0.1:8000 to start using the tool
    ```
 3. Start the service:
    ```bash
-   sudo systemctl start paper_summarizer
+   sudo systemctl start paper-summarizer
    ```
 4. Enable the service to start on boot:
    ```bash
-   sudo systemctl enable paper_summarizer
+   sudo systemctl enable paper-summarizer
    ```
 
 ### Network Access Setup
@@ -208,7 +208,7 @@ uvicorn src.main:app --reload
 ### システムサービスとして実行
 1. サービスファイルをコピー:
    ```bash
-   sudo cp paper_summarizer.service /etc/systemd/system/
+   sudo cp paper-summarizer.service /etc/systemd/system/
    ```
 2. systemdマネージャーの設定をリロード:
    ```bash
@@ -216,11 +216,11 @@ uvicorn src.main:app --reload
    ```
 3. サービスを開始:
    ```bash
-   sudo systemctl start paper_summarizer
+   sudo systemctl start paper-summarizer
    ```
 4. ブート時にサービスを有効化:
    ```bash
-   sudo systemctl enable paper_summarizer
+   sudo systemctl enable paper-summarizer
    ```
 
 ### ネットワークアクセスの設定
