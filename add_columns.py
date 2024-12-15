@@ -30,15 +30,25 @@ def get_database_properties(database_id):
 
 # カラムを追加
 def add_column_to_database(database_id, column_name):
+    # Keywordsカラムの場合は特別な処理
+    if column_name == "Keywords":
+        property_config = {
+            "multi_select": {}  # multi_selectタイプのプロパティ
+        }
+    else:
+        property_config = {
+            "rich_text": {}  # 他のカラムはrich_textタイプ
+        }
+
     payload = {
         "properties": {
-            column_name: {
-                "rich_text": {}
-            }
+            column_name: property_config
         }
     }
+
     url = f"https://api.notion.com/v1/databases/{database_id}"
     response = requests.patch(url, headers=headers, data=json.dumps(payload))
+    
     if response.status_code == 200:
         print(f"{column_name} カラムが正常に追加されました。")
     else:

@@ -44,6 +44,15 @@ def add_summary2notion(pdf_path):
             logger.error(f"JSONのパースに失敗: {e}")
             return False
         
+        # JSONデータの前処理を追加
+        for key, value in json_data.items():
+            # 空の配列の場合は空文字列に変換
+            if isinstance(value, list) and not value:
+                json_data[key] = ""
+            # 配列の場合は文字列に変換（Keywords以外）
+            elif isinstance(value, list) and key != "Keywords":
+                json_data[key] = ", ".join(map(str, value))
+
         keywords = [{"name" : keyword} for keyword in json_data['Keywords']]
 
         new_page_data = {
@@ -98,7 +107,7 @@ def add_summary2notion(pdf_path):
                     "title": [
                         {
                             "text": {
-                                "content": json_data[column]
+                                "content": str(json_data[column])  # 文字列に変換
                             }
                         }
                     ]
@@ -108,7 +117,7 @@ def add_summary2notion(pdf_path):
                     "rich_text": [
                         {
                             "text": {
-                                "content": json_data[column]
+                                "content": str(json_data[column])  # 文字列に変換
                             }
                         }
                     ]
