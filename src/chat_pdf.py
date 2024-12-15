@@ -29,15 +29,13 @@ def read_pdf(file_path):
     return text
 
 def create_prompt():
-
-    json_structure = '""""あなたは優秀な研究者です，日本語で要約してください, KeywordsはEnglish, 以下のフォーマットでできる限り最大限具体的に，参考文献はタイトル\n{\n'
-    for column in columns:
+    json_structure = '""""あなたは優秀な研究者です。以下の項目についてrich_text形式で日本語で論文を要約してください。\n{\n'
+    for column, prompt in config.column_prompts.items():
         if column == "Keywords":
-            json_structure += f'    "{column}": ["", ""]\n'
+            json_structure += f'    "{column}": ["", ""] // {prompt}\n'
         else:
-            json_structure += f'    "{column}": ,\n'
+            json_structure += f'    "{column}": , // {prompt}\n'
     json_structure += '}"""'
-
     return json_structure
 
 def get_summary(pdf_path, model_name=None):
