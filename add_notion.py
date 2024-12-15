@@ -23,9 +23,9 @@ def add_summary2notion(pdf_path):
         logger.info(f"PDFの要約を開始: {pdf_path}")
         plain_text = get_summary(pdf_path)
         
-        if plain_text == None:
+        if plain_text is None:
             logger.error("要約の生成に失敗しました")
-            return False
+            return None  # 要約生成失敗の場合はNoneを返す
             
         logger.info(f"生成された要約: {plain_text}")
         
@@ -134,7 +134,7 @@ def add_summary2notion(pdf_path):
             
     except Exception as e:
         logger.error(f"予期せぬエラーが発生: {e}")
-        return False
+        return False  # Notion追加失敗の場合はFalseを返す
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download and summarize arXiv paper")

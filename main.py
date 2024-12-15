@@ -54,10 +54,12 @@ async def upload_pdf(request: Request, pdf_file: UploadFile = File(...)):
         result = add_summary2notion(file_location)
         logger.info(f"Notionへの追加結果: {result}")
         
-        if result:
+        if result is None:  # 要約生成失敗
+            output = "要約の生成に失敗しました。Geminiのエラーを確認してください。"
+        elif result is True:  # 完全に成功
             output = "要約の生成とNotionへの追加が完了しました。"
-        else:
-            output = "要約の生成は完了しましたが、Notionへの追加に失敗した可能性があります。"
+        else:  # Notionへの追加失敗
+            output = "要約の生成は完了しましたが、Notionへの追加に失敗しました。"
         
         os.remove(file_location)
         logger.info(f"一時ファイルを削除: {file_location}")
