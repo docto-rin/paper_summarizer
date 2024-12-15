@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Get Paper by ID</title>
+    <title>Paper Summarizer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -38,18 +38,18 @@
     </style>
 </head>
 <body>
-    <h1>Enter Arxiv Paper ID</h1>
+    <h1>arXiv Paper Summarizer</h1>
+    
+    <h2>ArXiv IDから論文を取得</h2>
     <form action="/get-paper" method="post">
-        <label for="paper_id">Paper ID:</label>
-        <input type="text" id="paper_id" name="paper_id">
-        <input type="submit" value="Get Paper">
+        <input type="text" name="paper_id" placeholder="ArXiv ID (例: 2302.00083)">
+        <input type="submit" value="Submit">
     </form>
 
-    <h1>Upload PDF</h1>
+    <h2>PDFファイルをアップロード</h2>
     <form action="/upload-pdf" method="post" enctype="multipart/form-data">
-        <label for="pdf_file">Choose PDF file:</label>
-        <input type="file" id="pdf_file" name="pdf_file" accept="application/pdf">
-        <input type="submit" value="Upload PDF">
+        <input type="file" name="pdf_file" accept=".pdf">
+        <input type="submit" value="Upload">
     </form>
 </body>
 </html>

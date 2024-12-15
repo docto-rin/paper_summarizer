@@ -25,11 +25,19 @@
         button:hover {
             background-color: #0056b3;
         }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success { color: green; }
+        .error { color: red; }
     </style>
 </head>
 <body>
-    <h1>Result</h1>
-    <p>{{ output }}</p>
-    <button onclick="window.history.back()">Back</button>
+    <h1>処理結果</h1>
+    <pre {% if "エラー" in output %}class="error"{% else %}class="success"{% endif %}>
+{{ output }}
+    </pre>
+    <a href="/">Back to Home</a>
 </body>
 </html>

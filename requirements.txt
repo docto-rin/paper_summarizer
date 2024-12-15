@@ -3,5 +3,8 @@ uvicorn
 arxiv
 notion_client
 PyPDF2
-google-generativeai
+google-generativeai>=0.3.0
 python-dotenv
+python-multipart
+jinja2>=3.0.0
+requests
