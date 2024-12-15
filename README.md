@@ -2,7 +2,12 @@
 
 [English](#english) | [日本語](#japanese)
 
-![paper-summarizer-image](paper-summarizer-image.png)
+![paper-summarizer-image1](img/paper-summarizer-image1.png)
+
+<div style="display: flex; gap: 10px; margin: 20px 0;">
+    <img src="img/paper-summarizer-image2.png" alt="paper-summarizer-image2" width="49%">
+    <img src="img/paper-summarizer-image3.png" alt="paper-summarizer-image3" width="49%">
+</div>
 
 <a id="english"></a>
 # Paper Summarizer
