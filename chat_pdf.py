@@ -1,16 +1,21 @@
 import PyPDF2
 import google.generativeai as genai
-# import openai
 import config as config
+import logging
 
-# Configure Google Gemini as primary model
+logger = logging.getLogger(__name__)
+
+# Configure Google Gemini
 genai.configure(api_key=config.GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
 
-# OpenAI client configuration (commented out)
-# client = OpenAI(
-#     api_key=config.OPENAI_API_KEY
-# )
+def get_model(model_name=None):
+    """モデルのインスタンスを取得"""
+    model_name = model_name or config.GOOGLE_MODEL
+    try:
+        return genai.GenerativeModel(model_name=model_name)
+    except Exception as e:
+        logger.error(f"モデルの初期化に失敗: {e}")
+        return None
 
 columns = config.columns
 
@@ -35,29 +40,19 @@ def create_prompt():
 
     return json_structure
 
-def get_summary(pdf_path):
+def get_summary(pdf_path, model_name=None):
     pdf_text = read_pdf(pdf_path)
     prompt = create_prompt()
+    
+    model = get_model(model_name)
+    if not model:
+        return None
 
     try:
-        # Try with Gemini first
         response = model.generate_content(pdf_text + "\n" + prompt)
         return response.text
     except Exception as e:
-        print(f"An error occurred with Gemini: {e}")
-        
-        # Fallback to OpenAI (commented out)
-        # try:
-        #     completion = client.chat.completions.create(
-        #     model="gpt-4",
-        #     messages=[
-        #         {"role": "system", "content": "You are a research paper summarizer."},
-        #         {"role": "user", "content": pdf_text + "\n" + prompt}
-        #     ]
-        #     )
-        #     return completion.choices[0].message.content
-        # except Exception as e:
-        #     print(f"An error occurred with OpenAI fallback: {e}")
+        logger.error(f"An error occurred with Gemini: {e}")
         return None
 
 if __name__ == "__main__":

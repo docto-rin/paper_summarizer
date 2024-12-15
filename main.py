@@ -6,6 +6,7 @@ from add_notion import add_summary2notion
 import subprocess
 import os
 import logging
+import config
 
 # ロギングの設定
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +21,10 @@ if not os.path.exists('./papers'):
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "default_model": config.GOOGLE_MODEL
+    })
 
 @app.post("/get-paper", response_class=HTMLResponse)
 async def get_paper(request: Request, paper_id: str = Form(...)):
@@ -42,7 +46,11 @@ async def get_paper(request: Request, paper_id: str = Form(...)):
     return templates.TemplateResponse("result.html", {"request": request, "output": output})
 
 @app.post("/upload-pdf", response_class=HTMLResponse)
-async def upload_pdf(request: Request, pdf_file: UploadFile = File(...)):
+async def upload_pdf(
+    request: Request,
+    pdf_file: UploadFile = File(...),
+    model_name: str = Form(None)
+):
     try:
         file_location = f"./papers/{pdf_file.filename}"
         with open(file_location, "wb") as file:
@@ -50,8 +58,8 @@ async def upload_pdf(request: Request, pdf_file: UploadFile = File(...)):
         
         logger.info(f"PDFファイルを保存: {file_location}")
         
-        # 直接add_summary2notionを呼び出す
-        result = add_summary2notion(file_location)
+        # モデル名を指定して要約を実行
+        result = add_summary2notion(file_location, model_name)
         logger.info(f"Notionへの追加結果: {result}")
         
         if result is None:  # 要約生成失敗

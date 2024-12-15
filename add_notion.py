@@ -18,10 +18,10 @@ database_id = config.database_id
 # カラム情報を設定
 columns = config.columns
 
-def add_summary2notion(pdf_path):
+def add_summary2notion(pdf_path, model_name=None):
     try:
-        logger.info(f"PDFの要約を開始: {pdf_path}")
-        plain_text = get_summary(pdf_path)
+        logger.info(f"PDFの要約を開始: {pdf_path}, モデル: {model_name or 'デフォルト'}")
+        plain_text = get_summary(pdf_path, model_name)
         
         if plain_text is None:
             logger.error("要約の生成に失敗しました")

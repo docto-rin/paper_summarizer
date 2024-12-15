@@ -6,6 +6,7 @@ load_dotenv()
 
 # Get environment variables
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+GOOGLE_MODEL = os.getenv('GOOGLE_MODEL', 'gemini-pro')  # デフォルト値を設定
 # OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 NOTION_API_KEY = os.getenv('NOTION_API_KEY')
 database_id = os.getenv('NOTION_DATABASE_ID')

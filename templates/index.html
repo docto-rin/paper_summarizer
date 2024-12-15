@@ -1,55 +1,94 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Paper Summarizer</title>
+    <title>論文要約ツール</title>
     <style>
         body {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
             font-family: Arial, sans-serif;
-            margin: 40px;
         }
-        h1 {
-            color: #333;
+        .form-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
-        form {
-            margin-bottom: 20px;
+        .model-select {
+            margin-bottom: 10px;
         }
-        label {
-            display: block;
-            margin-bottom: 8px;
+        .form-row {
+            margin-bottom: 15px;
         }
-        input[type="text"], input[type="file"] {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 12px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        input[type="submit"] {
+        .submit-button {
+            background-color: #4CAF50;
+            color: white;
             padding: 10px 20px;
-            background-color: #007BFF;
             border: none;
             border-radius: 4px;
-            color: white;
             cursor: pointer;
         }
-        input[type="submit"]:hover {
-            background-color: #0056b3;
+        .model-selector {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .model-info {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
-    <h1>Paper Summarizer</h1>
-    
-    <h2>ArXiv IDから論文を取得</h2>
-    <form action="/get-paper" method="post">
-        <input type="text" name="paper_id" placeholder="ArXiv ID (例: 2302.00083)">
-        <input type="submit" value="Submit">
-    </form>
+    <h1>論文要約ツール</h1>
+    <p>PDFファイルのアップロードまたはarXiv IDから論文を要約し、Notionに保存します。</p>
 
-    <h2>PDFファイルをアップロード</h2>
-    <form action="/upload-pdf" method="post" enctype="multipart/form-data">
-        <input type="file" name="pdf_file" accept=".pdf">
-        <input type="submit" value="Upload">
-    </form>
+    <!-- 共通のモデル選択部分 -->
+    <div class="model-selector">
+        <h3>使用するモデルを選択</h3>
+        <select id="shared-model" onchange="updateModels(this.value)">
+            <option value="gemini-pro" {% if default_model == "gemini-pro" %}selected{% endif %}>Gemini Pro (推奨)</option>
+            <option value="gemini-1.5-flash-002" {% if default_model == "gemini-1.5-flash-002" %}selected{% endif %}>Gemini 1.5 Flash</option>
+        </select>
+        <p class="model-info">※ 長い論文の場合はGemini 1.5 Flashが適している場合があります</p>
+    </div>
+
+    <div class="form-section">
+        <h2>PDFファイルから要約</h2>
+        <form action="/upload-pdf" method="post" enctype="multipart/form-data">
+            <div class="form-row">
+                <input type="file" name="pdf_file" accept=".pdf" required>
+            </div>
+            <input type="hidden" name="model_name" id="pdf-model">
+            <div class="form-row">
+                <input type="submit" value="要約を開始" class="submit-button">
+            </div>
+        </form>
+    </div>
+
+    <div class="form-section">
+        <h2>arXiv IDから要約</h2>
+        <form action="/get-paper" method="post">
+            <div class="form-row">
+                <input type="text" name="paper_id" placeholder="例: 2302.00083" required>
+            </div>
+            <input type="hidden" name="model_name" id="arxiv-model">
+            <div class="form-row">
+                <input type="submit" value="要約を開始" class="submit-button">
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function updateModels(value) {
+            document.getElementById('pdf-model').value = value;
+            document.getElementById('arxiv-model').value = value;
+        }
+        // 初期値を設定
+        updateModels(document.getElementById('shared-model').value);
+    </script>
 </body>
 </html>
