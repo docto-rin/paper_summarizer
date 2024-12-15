@@ -15,10 +15,11 @@ headers = {
 # データベースID
 database_id = config.database_id
 
-# 必要な列のみを定義
+# 必要な列のみを定義（database_propertyがTrueの列のみ）
 required_columns = {
-    "Name": config.column_configs["Name"],
-    "Keywords": config.column_configs["Keywords"]
+    name: config 
+    for name, config in config.column_configs.items() 
+    if config.get("database_property", False)
 }
 
 # データベースの既存カラムを取得
