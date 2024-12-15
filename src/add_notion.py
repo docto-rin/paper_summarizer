@@ -110,22 +110,45 @@ class NotionSummaryWriter:
         """Notionのプロパティを生成"""
         properties = {}
         for column, config in self.config.column_configs.items():
-            # タイトルとキーワードのみプロパティとして保存
+            if not config.get("database_property", False):
+                continue
+                
+            if column not in sections:
+                logger.warning(f"セクション {column} が見つかりません")
+                continue
+
             if config["notion_type"] == "multi_select":
+                # Keywordsの処理
                 if column == "Keywords":
                     keywords = self._process_keywords(sections[column])
                     properties[column] = {
                         "multi_select": [{"name": k} for k in keywords]
                     }
             elif config["notion_type"] == "title":
+                # タイトルの処理
                 properties[column] = {
                     "title": [{"text": {"content": str(sections[column])}}]
                 }
-            # rich_text型のプロパティは作成しない
+            else:  # rich_text
+                # その他のデータベースプロパティとして表示する項目
+                properties[column] = {
+                    "rich_text": [{"text": {"content": str(sections[column])}}]
+                }
 
         return properties
 
-    def add_summary(self, pdf_path: str, model_name: Optional[str] = None) -> Optional[bool]:
+    def _create_subpage_blocks(self, title: str, blocks: list) -> dict:
+        """サブページを作成するためのデータを生成"""
+        return {
+            "object": "block",
+            "type": "child_page",
+            "child_page": {
+                "title": title
+            },
+            "children": blocks
+        }
+
+    def add_summary(self, pdf_path: str, model_name: Optional[str] = None, summary_mode: str = "concise") -> Optional[bool]:
         """
         PDFの要約をNotionに追加
         Returns:
@@ -134,17 +157,17 @@ class NotionSummaryWriter:
             False: Notion追加失敗
         """
         try:
-            logger.info(f"PDFの要約を開始: {pdf_path}, モデル: {model_name or 'デフォルト'}")
-            sections = get_summary(pdf_path, model_name)
+            logger.info(f"PDFの要約を開始: {pdf_path}, モデル: {model_name or 'デフォルト'}, モード: {summary_mode}")
+            sections = get_summary(pdf_path, model_name, summary_mode)
             
             if sections is None:
                 logger.error("要約の生成に失敗しました")
                 return None
             
-            # プロパティの作成
+            # プロパティの作成（database_property: Trueの項目はデータベースにも表示）
             properties = self._create_notion_properties(sections)
             
-            # 目次ブロックを最初に追加
+            # ブロックを作成（目次から始める）
             all_blocks = [
                 {
                     "object": "block",
@@ -158,42 +181,53 @@ class NotionSummaryWriter:
                 }
             ]
             
-            # 各セクションのコンテンツをブロックに変換
+            # 各セクションのコンテンツをブロックとして追加
             for column, content in sections.items():
                 if column != "Keywords" and column != "Name":
-                    all_blocks.append({
-                        "object": "block",
-                        "type": "heading_2",
-                        "heading_2": {"rich_text": [{"text": {"content": column}}]}
-                    })
-                    all_blocks.extend(self._convert_markdown_to_blocks(str(content)))
-                    all_blocks.append({
-                        "object": "block",
-                        "type": "divider",
-                        "divider": {}
-                    })
+                    all_blocks.extend([
+                        {
+                            "object": "block",
+                            "type": "heading_2",
+                            "heading_2": {"rich_text": [{"text": {"content": column}}]}
+                        },
+                        *self._convert_markdown_to_blocks(str(content)),
+                        {
+                            "object": "block",
+                            "type": "divider",
+                            "divider": {}
+                        }
+                    ])
 
-            # Notionページの作成
-            new_page_data = {
+            # 100ブロックごとに分割して保存
+            MAX_BLOCKS = 90  # 余裕を持って90に設定
+            block_chunks = [all_blocks[i:i + MAX_BLOCKS] for i in range(0, len(all_blocks), MAX_BLOCKS)]
+            
+            # メインページを作成
+            main_page = {
                 "parent": {"database_id": self.database_id},
                 "properties": properties,
-                "children": all_blocks
+                "children": block_chunks[0] if block_chunks else []
             }
+            
+            main_response = self.notion.pages.create(**main_page)
+            main_page_id = main_response["id"]
+            
+            # 残りのブロックがあれば、メインページに追加
+            for chunk in block_chunks[1:]:
+                self.notion.blocks.children.append(block_id=main_page_id, children=chunk)
 
-            response = self.notion.pages.create(**new_page_data)
             logger.info("Notionページの作成に成功しました")
-            logger.debug(f"Notionのレスポンス: {response}")
             return True
 
         except Exception as e:
             logger.error(f"予期せぬエラーが発生: {e}")
             return False
 
-def add_summary2notion(pdf_path: str, model_name: Optional[str] = None) -> Optional[bool]:
+def add_summary2notion(pdf_path: str, model_name: Optional[str] = None, summary_mode: str = "concise") -> Optional[bool]:
     """レガシー互換性のための関数"""
     from . import config
     writer = NotionSummaryWriter(config)
-    return writer.add_summary(pdf_path, model_name)
+    return writer.add_summary(pdf_path, model_name, summary_mode)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="論文要約をNotionに追加")

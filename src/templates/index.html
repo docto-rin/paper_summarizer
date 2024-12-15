@@ -108,6 +108,20 @@
         h1, h2, h3 {
             color: #fff;
         }
+        .summary-mode {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #333;
+            border-radius: 5px;
+        }
+        .mode-toggle {
+            margin-top: 10px;
+            display: flex;
+            gap: 20px;
+        }
+        .mode-toggle input[type="radio"] {
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
@@ -146,10 +160,22 @@
     <div class="form-section">
         <h2>PDFファイルから要約</h2>
         <form id="uploadForm" action="/upload-pdf" method="post" enctype="multipart/form-data">
+            <!-- 要約モード選択 -->
+            <div class="summary-mode">
+                <h3>要約モード</h3>
+                <div class="mode-toggle">
+                    <input type="radio" id="mode-concise" name="summary_mode" value="concise" checked>
+                    <label for="mode-concise">簡潔モード（基本項目のみ）</label>
+                    
+                    <input type="radio" id="mode-detailed" name="summary_mode" value="detailed">
+                    <label for="mode-detailed">詳細モード（全項目）</label>
+                </div>
+            </div>
+            
             <div class="form-row">
                 <input type="file" name="pdf_file" accept=".pdf" required>
             </div>
-            <input type="hidden" name="model_name" id="pdf-model">
+            <input type="hidden" name="model_name" id="pdf-model" value="{{ default_model }}">
             <div class="form-row">
                 <input type="submit" value="要約を開始" class="submit-button" id="submitBtn">
                 <div id="uploadStatus" class="form-status">要約を実行中です...</div>

@@ -37,7 +37,7 @@ def get_database_properties(database_id):
 def add_column_to_database(database_id, column_name):
     column_config = config.column_configs[column_name]
     property_config = {
-        column_config["notion_type"]: column_config["notion_config"]
+        column_config["notion_type"]: {}  # 空のconfigで十分
     }
 
     payload = {
@@ -60,31 +60,14 @@ def initialize_database():
     existing_columns = get_database_properties(database_id)
     
     # 必要な列が全て存在するかチェック
-    all_exists = all(column in existing_columns for column in required_columns.keys())
+    all_exists = all(column in existing_columns for column in required_columns)
     if all_exists:
         return False
     
     # 必要な列のみを追加
-    for column_name, column_config in required_columns.items():
+    for column_name in required_columns:
         if column_name not in existing_columns:
-            property_config = {
-                column_config["notion_type"]: column_config["notion_config"]
-            }
-            
-            payload = {
-                "properties": {
-                    column_name: property_config
-                }
-            }
-            
-            url = f"https://api.notion.com/v1/databases/{database_id}"
-            response = requests.patch(url, headers=headers, data=json.dumps(payload))
-            
-            if response.status_code == 200:
-                print(f"{column_name} カラムが正常に追加されました。")
-            else:
-                print(f"{column_name} カラムの追加中にエラーが発生しました: {response.status_code}")
-                print(response.text)
+            add_column_to_database(database_id, column_name)
     
     return True
 

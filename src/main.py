@@ -42,7 +42,8 @@ async def read_root(request: Request):
 async def upload_pdf(
     request: Request,
     pdf_file: UploadFile = File(...),
-    model_name: str = Form(None)
+    model_name: str = Form(None),
+    summary_mode: str = Form("concise")  # デフォルトは簡潔モード
 ):
     try:
         file_location = f"src/papers/{pdf_file.filename}"
@@ -51,8 +52,8 @@ async def upload_pdf(
         
         logger.info(f"PDFファイルを保存: {file_location}")
         
-        # モデル名を指定して要約を実行
-        result = add_summary2notion(file_location, model_name)
+        # モード指定を追加して要約を実行
+        result = add_summary2notion(file_location, model_name, summary_mode)
         logger.info(f"Notionへの追加結果: {result}")
         
         if result is None:  # 要約生成失敗
