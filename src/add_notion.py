@@ -68,24 +68,19 @@ class NotionSummaryWriter:
         """
         try:
             logger.info(f"PDFの要約を開始: {pdf_path}, モデル: {model_name or 'デフォルト'}")
-            plain_text = get_summary(pdf_path, model_name)
+            sections = get_summary(pdf_path, model_name)
             
-            if plain_text is None:
+            if sections is None:
                 logger.error("要約の生成に失敗しました")
                 return None
                 
-            logger.info(f"生成された要約: {plain_text}")
+            logger.info(f"生成された要約セクション: {sections.keys()}")
             
-            # JSONデータの抽出と解析
-            json_data = self._extract_json(plain_text)
-            if not json_data:
-                return False
-
             # Notionページの作成データを準備
             new_page_data = {
                 "parent": {"database_id": self.database_id},
-                "properties": self._create_notion_properties(json_data),
-                "children": self._create_toggle_blocks(json_data)
+                "properties": self._create_notion_properties(sections),
+                "children": self._create_toggle_blocks(sections)
             }
 
             # Notionページの作成
@@ -97,30 +92,6 @@ class NotionSummaryWriter:
         except Exception as e:
             logger.error(f"予期せぬエラーが発生: {e}")
             return False
-
-    def _extract_json(self, text: str) -> Optional[Dict[str, Any]]:
-        """テキストからJSONを抽出して解析"""
-        try:
-            pattern = r'\{[^{}]+\}'
-            matches = re.findall(pattern, text)
-            if not matches:
-                logger.error("JSONパターンが見つかりませんでした")
-                return None
-
-            json_data = json.loads(matches[0])
-            
-            # JSONデータの前処理
-            for key, value in json_data.items():
-                if isinstance(value, list) and not value and key != "Keywords":
-                    json_data[key] = ""
-                elif isinstance(value, list) and key != "Keywords":
-                    json_data[key] = ", ".join(map(str, value))
-            
-            return json_data
-
-        except json.JSONDecodeError as e:
-            logger.error(f"JSONのパース失敗: {e}")
-            return None
 
 def add_summary2notion(pdf_path: str, model_name: Optional[str] = None) -> Optional[bool]:
     """レガシー互換性のための関数"""

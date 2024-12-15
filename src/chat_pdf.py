@@ -3,7 +3,6 @@ import google.generativeai as genai
 from . import config
 import logging
 import re
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -31,39 +30,38 @@ def read_pdf(file_path):
     return text
 
 def create_prompt():
-    json_structure = """以下の論文を要約してJSON形式で出力してください。
-出力フォーマットは必ず以下の通りとし、各項目の説明に従って内容を記述してください。
-中間にMarkdown記法は使用せず、純粋なJSONのみを出力してください。
+    """マークダウン形式のプロンプトを作成"""
+    markdown_prompt = """以下の論文を要約してマークダウン形式で出力してください。
+各セクションの見出しは以下の通りとし、各項目の説明に従って内容を記述してください。
 
-{
 """
     for column, configs in config.column_configs.items():
-        if configs["notion_type"] == "multi_select":
-            json_structure += f'    "{column}": [], // {configs["prompt"]}\n'
-        else:
-            json_structure += f'    "{column}": "", // {configs["prompt"]}\n'
-    json_structure += "}"
-    return json_structure
+        markdown_prompt += f"## {column}\n{configs['prompt']}\n\n"
+    return markdown_prompt
 
-def extract_json_from_response(text):
-    """応答テキストからJSONを抽出して整形する"""
-    try:
-        # まず { から } までの部分を抽出
-        pattern = r'\{[^{}]*(?:\{[^{}]*\})*[^{}]*\}'
-        matches = re.findall(pattern, text)
-        if not matches:
-            logger.error("JSONパターンが見つかりませんでした")
-            return None
-            
-        # コメントを除去
-        json_text = re.sub(r'//.*$', '', matches[0], flags=re.MULTILINE)
-        # 末尾のカンマを除去
-        json_text = re.sub(r',(\s*})', r'\1', json_text)
-        
-        return json.loads(json_text)
-    except Exception as e:
-        logger.error(f"JSON抽出処理でエラー: {e}")
-        return None
+def extract_sections_from_markdown(text):
+    """マークダウンテキストから各セクションを抽出"""
+    sections = {}
+    current_section = None
+    current_content = []
+    
+    for line in text.split('\n'):
+        if line.startswith('## '):
+            if current_section:
+                sections[current_section] = '\n'.join(current_content).strip()
+                current_content = []
+            current_section = line[3:].strip()
+        elif current_section:
+            current_content.append(line)
+    
+    if current_section and current_content:
+        sections[current_section] = '\n'.join(current_content).strip()
+    
+    # Keywords を配列に変換
+    if 'Keywords' in sections:
+        sections['Keywords'] = [k.strip() for k in sections['Keywords'].split(',')]
+    
+    return sections
 
 def get_summary(pdf_path, model_name=None):
     pdf_text = read_pdf(pdf_path)
@@ -75,9 +73,9 @@ def get_summary(pdf_path, model_name=None):
 
     try:
         response = model.generate_content(pdf_text + "\n" + prompt)
-        json_data = extract_json_from_response(response.text)
-        if json_data:
-            return json.dumps(json_data, ensure_ascii=False)
+        sections = extract_sections_from_markdown(response.text)
+        if sections:
+            return sections
         return None
     except Exception as e:
         logger.error(f"An error occurred with Gemini: {e}")
