@@ -3,4 +3,5 @@ uvicorn
 arxiv
 notion_client
 PyPDF2
-openai
+google-generativeai
+python-dotenv
