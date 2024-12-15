@@ -3,7 +3,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
 from add_notion import add_summary2notion
-import subprocess
 import os
 import logging
 import config
@@ -25,25 +24,6 @@ async def read_root(request: Request):
         "request": request,
         "default_model": config.GOOGLE_MODEL
     })
-
-@app.post("/get-paper", response_class=HTMLResponse)
-async def get_paper(request: Request, paper_id: str = Form(...)):
-    try:
-        logger.info(f"arXiv ID: {paper_id}の処理を開始")
-        result = subprocess.run(
-            ["python3", "get_paper_by_id.py", paper_id],
-            capture_output=True,
-            text=True,
-            encoding='utf-8'
-        )
-        output = result.stdout.strip()
-        logger.info(f"処理結果: {output}")
-        
-    except Exception as e:
-        logger.error(f"エラーが発生しました: {str(e)}")
-        output = f"エラーが発生しました: {str(e)}"
-    
-    return templates.TemplateResponse("result.html", {"request": request, "output": output})
 
 @app.post("/upload-pdf", response_class=HTMLResponse)
 async def upload_pdf(
