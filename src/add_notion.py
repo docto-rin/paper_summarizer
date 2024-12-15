@@ -5,140 +5,135 @@ import re
 import os
 import argparse
 import logging
-from . import config
+from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-# Notion APIキーを設定
-notion = Client(auth=config.NOTION_API_KEY)
+class NotionSummaryWriter:
+    def __init__(self, config_module):
+        """
+        NotionSummaryWriterの初期化
+        Args:
+            config_module: 設定モジュール（通常はsrc.config）
+        """
+        self.config = config_module
+        self.notion = Client(auth=self.config.NOTION_API_KEY)
+        self.database_id = self.config.database_id
 
-# データベースIDを設定
-database_id = config.database_id
-
-# カラム情報を設定
-columns = config.columns
-
-def add_summary2notion(pdf_path, model_name=None):
-    try:
-        logger.info(f"PDFの要約を開始: {pdf_path}, モデル: {model_name or 'デフォルト'}")
-        plain_text = get_summary(pdf_path, model_name)
-        
-        if (plain_text is None):
-            logger.error("要約の生成に失敗しました")
-            return None  # 要約生成失敗の場合はNoneを返す
-            
-        logger.info(f"生成された要約: {plain_text}")
-        
-        pattern = r'\{[^{}]+\}'
-        matches = re.findall(pattern, plain_text)
-        
-        if not matches:
-            logger.error("JSONパターンが見つかりませんでした")
-            return False
-            
-        logger.info(f"抽出されたJSON: {matches[0]}")
-        
-        try:
-            json_data = json.loads(matches[0])
-        except json.JSONDecodeError as e:
-            logger.error(f"JSONのパースに失敗: {e}")
-            return False
-        
-        # JSONデータの前処理を追加
+    def _create_toggle_blocks(self, json_data: Dict[str, Any]) -> list:
+        """トグルブロックを生成"""
+        blocks = []
         for key, value in json_data.items():
-            # 空の配列の場合は空文字列に変換
-            if isinstance(value, list) and not value:
-                json_data[key] = ""
-            # 配列の場合は文字列に変換（Keywords以外）
-            elif isinstance(value, list) and key != "Keywords":
-                json_data[key] = ", ".join(map(str, value))
-
-        keywords = [{"name" : keyword} for keyword in json_data['Keywords']]
-
-        new_page_data = {
-            "parent": {
-                "database_id": database_id},
-                "properties": {},
-                "children": []
-            }
-
-        # JSONデータをキーごとにトグル形式に変換
-        for key, value in json_data.items():
-            toggle_block = {
+            blocks.append({
                 "object": "block",
                 "type": "toggle",
                 "toggle": {
-                    "rich_text": [
-                        {
-                            "type": "text",
-                            "text": {
-                                "content": key
-                            }
+                    "rich_text": [{"type": "text", "text": {"content": key}}],
+                    "children": [{
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {
+                            "rich_text": [{"type": "text", "text": {"content": str(value)}}]
                         }
-                    ],
-                    "children": [
-                        {
-                            "object": "block",
-                            "type": "paragraph",
-                            "paragraph": {
-                                "rich_text": [
-                                    {
-                                        "type": "text",
-                                        "text": {
-                                            "content": str(value)
-                                        }
-                                    }
-                                ]
-                            }
-                        }
-                    ]
+                    }]
                 }
-            }
-            new_page_data["children"].append(toggle_block)
+            })
+        return blocks
 
+    def _create_notion_properties(self, json_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Notionのプロパティを生成"""
+        properties = {}
+        for column, config in self.config.column_configs.items():
+            if config["notion_type"] == "multi_select":
+                properties[column] = {
+                    "multi_select": [{"name": keyword} for keyword in json_data[column]]
+                }
+            elif config["notion_type"] == "title":
+                properties[column] = {
+                    "title": [{"text": {"content": str(json_data[column])}}]
+                }
+            else:  # rich_text
+                properties[column] = {
+                    "rich_text": [{"text": {"content": str(json_data[column])}}]
+                }
+        return properties
 
-        for column in columns:
-            if column == "Keywords":
-                new_page_data["properties"][column] = {
-                    "multi_select": keywords
-                }
-            elif column == "Name":
-                new_page_data["properties"][column] = {
-                    "title": [
-                        {
-                            "text": {
-                                "content": str(json_data[column])  # 文字列に変換
-                            }
-                        }
-                    ]
-                }
-            else:
-                new_page_data["properties"][column] = {
-                    "rich_text": [
-                        {
-                            "text": {
-                                "content": str(json_data[column])  # 文字列に変換
-                            }
-                        }
-                    ]
-                }
-
+    def add_summary(self, pdf_path: str, model_name: Optional[str] = None) -> Optional[bool]:
+        """
+        PDFの要約をNotionに追加
+        Returns:
+            None: 要約生成失敗
+            True: 完全成功
+            False: Notion追加失敗
+        """
         try:
-            response = notion.pages.create(**new_page_data)
+            logger.info(f"PDFの要約を開始: {pdf_path}, モデル: {model_name or 'デフォルト'}")
+            plain_text = get_summary(pdf_path, model_name)
+            
+            if plain_text is None:
+                logger.error("要約の生成に失敗しました")
+                return None
+                
+            logger.info(f"生成された要約: {plain_text}")
+            
+            # JSONデータの抽出と解析
+            json_data = self._extract_json(plain_text)
+            if not json_data:
+                return False
+
+            # Notionページの作成データを準備
+            new_page_data = {
+                "parent": {"database_id": self.database_id},
+                "properties": self._create_notion_properties(json_data),
+                "children": self._create_toggle_blocks(json_data)
+            }
+
+            # Notionページの作成
+            response = self.notion.pages.create(**new_page_data)
             logger.info("Notionページの作成に成功しました")
             logger.debug(f"Notionのレスポンス: {response}")
             return True
+
         except Exception as e:
-            logger.error(f"Notionページの作成に失敗: {e}")
+            logger.error(f"予期せぬエラーが発生: {e}")
             return False
+
+    def _extract_json(self, text: str) -> Optional[Dict[str, Any]]:
+        """テキストからJSONを抽出して解析"""
+        try:
+            pattern = r'\{[^{}]+\}'
+            matches = re.findall(pattern, text)
+            if not matches:
+                logger.error("JSONパターンが見つかりませんでした")
+                return None
+
+            json_data = json.loads(matches[0])
             
-    except Exception as e:
-        logger.error(f"予期せぬエラーが発生: {e}")
-        return False  # Notion追加失敗の場合はFalseを返す
+            # JSONデータの前処理
+            for key, value in json_data.items():
+                if isinstance(value, list) and not value and key != "Keywords":
+                    json_data[key] = ""
+                elif isinstance(value, list) and key != "Keywords":
+                    json_data[key] = ", ".join(map(str, value))
+            
+            return json_data
+
+        except json.JSONDecodeError as e:
+            logger.error(f"JSONのパース失敗: {e}")
+            return None
+
+def add_summary2notion(pdf_path: str, model_name: Optional[str] = None) -> Optional[bool]:
+    """レガシー互換性のための関数"""
+    from . import config
+    writer = NotionSummaryWriter(config)
+    return writer.add_summary(pdf_path, model_name)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Download and summarize arXiv paper")
-    parser.add_argument("pdf_path", nargs='?', default= "downloaded-paper.pdf", type=str, help="The pdf path want to make summarize")
+    parser = argparse.ArgumentParser(description="論文要約をNotionに追加")
+    parser.add_argument("pdf_path", nargs='?', default="downloaded-paper.pdf",
+                       type=str, help="要約するPDFファイルのパス")
     args = parser.parse_args()
     
-    add_summary2notion(args.pdf_path)
+    from . import config  # メイン実行時のみインポート
+    writer = NotionSummaryWriter(config)
+    writer.add_summary(args.pdf_path)

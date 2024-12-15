@@ -30,15 +30,10 @@ def get_database_properties(database_id):
 
 # カラムを追加
 def add_column_to_database(database_id, column_name):
-    # Keywordsカラムの場合は特別な処理
-    if column_name == "Keywords":
-        property_config = {
-            "multi_select": {}  # multi_selectタイプのプロパティ
-        }
-    else:
-        property_config = {
-            "rich_text": {}  # 他のカラムはrich_textタイプ
-        }
+    column_config = config.column_configs[column_name]
+    property_config = {
+        column_config["notion_type"]: column_config["notion_config"]
+    }
 
     payload = {
         "properties": {

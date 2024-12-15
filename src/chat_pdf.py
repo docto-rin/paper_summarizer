@@ -2,6 +2,8 @@ import PyPDF2
 import google.generativeai as genai
 from . import config
 import logging
+import re
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +31,39 @@ def read_pdf(file_path):
     return text
 
 def create_prompt():
-    json_structure = '""""あなたは優秀な研究者です。以下の項目についてrich_text形式で日本語で論文を要約してください。\n{\n'
-    for column, prompt in config.column_prompts.items():
-        if column == "Keywords":
-            json_structure += f'    "{column}": ["", ""] // {prompt}\n'
+    json_structure = """以下の論文を要約してJSON形式で出力してください。
+出力フォーマットは必ず以下の通りとし、各項目の説明に従って内容を記述してください。
+中間にMarkdown記法は使用せず、純粋なJSONのみを出力してください。
+
+{
+"""
+    for column, configs in config.column_configs.items():
+        if configs["notion_type"] == "multi_select":
+            json_structure += f'    "{column}": [], // {configs["prompt"]}\n'
         else:
-            json_structure += f'    "{column}": , // {prompt}\n'
-    json_structure += '}"""'
+            json_structure += f'    "{column}": "", // {configs["prompt"]}\n'
+    json_structure += "}"
     return json_structure
+
+def extract_json_from_response(text):
+    """応答テキストからJSONを抽出して整形する"""
+    try:
+        # まず { から } までの部分を抽出
+        pattern = r'\{[^{}]*(?:\{[^{}]*\})*[^{}]*\}'
+        matches = re.findall(pattern, text)
+        if not matches:
+            logger.error("JSONパターンが見つかりませんでした")
+            return None
+            
+        # コメントを除去
+        json_text = re.sub(r'//.*$', '', matches[0], flags=re.MULTILINE)
+        # 末尾のカンマを除去
+        json_text = re.sub(r',(\s*})', r'\1', json_text)
+        
+        return json.loads(json_text)
+    except Exception as e:
+        logger.error(f"JSON抽出処理でエラー: {e}")
+        return None
 
 def get_summary(pdf_path, model_name=None):
     pdf_text = read_pdf(pdf_path)
@@ -48,7 +75,10 @@ def get_summary(pdf_path, model_name=None):
 
     try:
         response = model.generate_content(pdf_text + "\n" + prompt)
-        return response.text
+        json_data = extract_json_from_response(response.text)
+        if json_data:
+            return json.dumps(json_data, ensure_ascii=False)
+        return None
     except Exception as e:
         logger.error(f"An error occurred with Gemini: {e}")
         return None
