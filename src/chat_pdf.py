@@ -1,6 +1,6 @@
 import PyPDF2
 import google.generativeai as genai
-import config as config
+from . import config
 import logging
 
 logger = logging.getLogger(__name__)

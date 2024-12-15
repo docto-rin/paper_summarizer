@@ -1,5 +1,12 @@
-.env
-papers/
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
+*.py[cod]
+
+# Virtualenv
 venv/
+
+# Secret keys
+.env
+
+# tmp folder
+src/papers/

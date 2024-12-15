@@ -2,21 +2,21 @@ from fastapi import FastAPI, Form, UploadFile, File
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
-from add_notion import add_summary2notion
+from .add_notion import add_summary2notion  # 相対インポートを削除
 import os
 import logging
-import config
+from . import config  # configのインポートを修正
 
 # ロギングの設定
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="src/templates")
 
 # papersディレクトリが存在しない場合は作成
-if not os.path.exists('./papers'):
-    os.makedirs('./papers')
+if not os.path.exists('src/papers'):
+    os.makedirs('src/papers')
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -32,7 +32,7 @@ async def upload_pdf(
     model_name: str = Form(None)
 ):
     try:
-        file_location = f"./papers/{pdf_file.filename}"
+        file_location = f"src/papers/{pdf_file.filename}"
         with open(file_location, "wb") as file:
             file.write(pdf_file.file.read())
         

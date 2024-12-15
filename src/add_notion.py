@@ -1,11 +1,11 @@
 from notion_client import Client
-from chat_pdf import get_summary
-import config as config
+from .chat_pdf import get_summary
 import json
 import re
 import os
 import argparse
 import logging
+from . import config
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ def add_summary2notion(pdf_path, model_name=None):
         logger.info(f"PDFの要約を開始: {pdf_path}, モデル: {model_name or 'デフォルト'}")
         plain_text = get_summary(pdf_path, model_name)
         
-        if plain_text is None:
+        if (plain_text is None):
             logger.error("要約の生成に失敗しました")
             return None  # 要約生成失敗の場合はNoneを返す
             

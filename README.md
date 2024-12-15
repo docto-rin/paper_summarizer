@@ -63,7 +63,7 @@ NOTION_DATABASE_ID=your_database_id
 ### 4. Run Application
 
 ```bash
-uvicorn main:app --reload
+uvicorn src.main:app --reload
 ```
 
 Access http://127.0.0.1:8000 to start using the tool
@@ -143,7 +143,7 @@ NOTION_DATABASE_ID=your_database_id
 ### 4. 起動方法
 
 ```bash
-uvicorn main:app --reload
+uvicorn src.main:app --reload
 ```
 
 ブラウザで http://127.0.0.1:8000 にアクセスして利用開始
