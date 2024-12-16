@@ -40,16 +40,22 @@ class NotionSummaryWriter:
     def _process_keywords(self, keywords: list) -> list:
         """キーワードリストを処理し、Notionの制限に適合させる"""
         processed_keywords = []
-        seen = set()  # 重複チェック用
+        seen = set()
 
         for keyword in keywords:
             if not keyword:
                 continue
             
-            sanitized = self._sanitize_keyword(keyword)
-            if sanitized and sanitized.lower() not in seen:
-                processed_keywords.append(sanitized)
-                seen.add(sanitized.lower())
+            # カンマを含む場合は分割して個別のキーワードとして処理
+            sub_keywords = [k.strip() for k in keyword.split(',')]
+            for sub_key in sub_keywords:
+                if not sub_key:
+                    continue
+                sanitized = self._sanitize_keyword(sub_key)
+                # 重複チェックと長さ制限（Notionの制限に合わせて）
+                if sanitized and sanitized.lower() not in seen and len(sanitized) <= 100:
+                    processed_keywords.append(sanitized)
+                    seen.add(sanitized.lower())
         
         return processed_keywords
 
@@ -57,101 +63,75 @@ class NotionSummaryWriter:
         """マークダウンテキストをNotionブロックに変換"""
         blocks = []
         lines = []
-        current_math = []
-        in_display_math = False
-        in_inline_math = False
         
         # 行ごとに処理
         for line in text.split('\n'):
             line = line.strip()
             if not line:
                 continue
-                
-            # ディスプレイ数式の処理
-            if '$$' in line:
-                # ...existing code for display math...
+            
+            # 1. 最も具体的な見出しから処理（最も制限が厳しいものから）
+            if line.startswith('### '):
+                blocks.append({
+                    "object": "block",
+                    "type": "heading_3",
+                    "heading_3": {
+                        "rich_text": [{"text": {"content": line[4:].strip()}}]
+                    }
+                })
+                continue
+            elif line.startswith('## '):
+                blocks.append({
+                    "object": "block",
+                    "type": "heading_2",
+                    "heading_2": {
+                        "rich_text": [{"text": {"content": line[3:].strip()}}]
+                    }
+                })
+                continue
+            elif line.startswith('# '):
+                blocks.append({
+                    "object": "block",
+                    "type": "heading_1",
+                    "heading_1": {
+                        "rich_text": [{"text": {"content": line[2:].strip()}}]
+                    }
+                })
+                continue
+            
+            # 2. リスト要素の処理（番号付きリストが箇条書きより制限が厳しい）
+            elif line.startswith('1. '):
+                blocks.append({
+                    "object": "block",
+                    "type": "numbered_list_item",
+                    "numbered_list_item": {
+                        "rich_text": [{"text": {"content": line[3:].strip()}}]
+                    }
+                })
+                continue
+            elif line.startswith('- ') or line.startswith('* '):
+                blocks.append({
+                    "object": "block",
+                    "type": "bulleted_list_item",
+                    "bulleted_list_item": {
+                        "rich_text": [{"text": {"content": line[2:].strip()}}]
+                    }
+                })
                 continue
 
-            # ディスプレイ数式の内容を収集
-            if in_display_math:
-                current_math.append(line)
-                continue
-
-            # インライン装飾とインライン数式を処理
+            # 3. インライン要素の処理（複雑な要素から順に）
             parts = []
             current_text = ""
             i = 0
             while i < len(line):
-                # ディスプレイ数式のチェック
+                # ディスプレイ数式（$$）
                 if line[i:i+2] == '$$':
-                    i += 2
-                    continue
-                
-                # 太字 (***) の処理
-                elif line[i:i+3] == '***':
-                    if current_text:
-                        parts.append({"type": "text", "content": current_text, "annotations": {}})
-                    current_text = ""
-                    i += 3
-                    bold_italic_content = ""
-                    while i < len(line) - 2 and line[i:i+3] != '***':
-                        bold_italic_content += line[i]
-                        i += 1
-                    if bold_italic_content:
-                        parts.append({
-                            "type": "text",
-                            "content": bold_italic_content,
-                            "annotations": {"bold": True, "italic": True}
-                        })
-                    i += 3
-                    continue
-                
-                # 太字 (**) の処理
-                elif line[i:i+2] == '**':
                     if current_text:
                         parts.append({"type": "text", "content": current_text, "annotations": {}})
                     current_text = ""
                     i += 2
-                    bold_content = ""
-                    while i < len(line) - 1 and line[i:i+2] != '**':
-                        bold_content += line[i]
-                        i += 1
-                    if bold_content:
-                        parts.append({
-                            "type": "text",
-                            "content": bold_content,
-                            "annotations": {"bold": True}
-                        })
-                    i += 2
-                    continue
-                
-                # イタリック (*) の処理
-                elif line[i] == '*':
-                    if current_text:
-                        parts.append({"type": "text", "content": current_text, "annotations": {}})
-                    current_text = ""
-                    i += 1
-                    italic_content = ""
-                    while i < len(line) and line[i] != '*':
-                        italic_content += line[i]
-                        i += 1
-                    if italic_content:
-                        parts.append({
-                            "type": "text",
-                            "content": italic_content,
-                            "annotations": {"italic": True}
-                        })
-                    i += 1
-                    continue
-                
-                # インライン数式 ($) の処理
-                elif line[i] == '$':
-                    if current_text:
-                        parts.append({"type": "text", "content": current_text, "annotations": {}})
-                    current_text = ""
-                    i += 1
                     math_content = ""
-                    while i < len(line) and line[i] != '$':
+                    while i < len(line) - 1 and line[i:i+2] != '$$':
                         math_content += line[i]
                         i += 1
                     if math_content:
@@ -159,9 +139,73 @@ class NotionSummaryWriter:
                             "type": "equation",
                             "content": math_content
                         })
+                    i += 2
+                    continue
+                
+                # 太字かつイタリック (***)
+                elif line[i:i+3] == '***':
+                    if current_text:
+                        parts.append({"type": "text", "content": current_text, "annotations": {}})
+                    current_text = ""
+                    i += 3
+                    content = ""
+                    while i < len(line) - 2 and line[i:i+3] != '***':
+                        content += line[i]
+                        i += 1
+                    if content:
+                        parts.append({
+                            "type": "text",
+                            "content": content,
+                            "annotations": {"bold": True, "italic": True}
+                        })
+                    i += 3
+                    continue
+                
+                # 太字 (**)
+                elif line[i:i+2] == '**':
+                    if current_text:
+                        parts.append({"type": "text", "content": current_text, "annotations": {}})
+                    current_text = ""
+                    i += 2
+                    content = ""
+                    while i < len(line) - 1 and line[i:i+2] != '**':
+                        content += line[i]
+                        i += 1
+                    if content:
+                        parts.append({
+                            "type": "text",
+                            "content": content,
+                            "annotations": {"bold": True}
+                        })
+                    i += 2
+                    continue
+                
+                # インライン数式 ($) とイタリック (*)
+                elif line[i] in ['$', '*']:
+                    if current_text:
+                        parts.append({"type": "text", "content": current_text, "annotations": {}})
+                    current_text = ""
+                    marker = line[i]
+                    i += 1
+                    content = ""
+                    while i < len(line) and line[i] != marker:
+                        content += line[i]
+                        i += 1
+                    if content:
+                        if marker == '$':
+                            parts.append({
+                                "type": "equation",
+                                "content": content
+                            })
+                        else:
+                            parts.append({
+                                "type": "text",
+                                "content": content,
+                                "annotations": {"italic": True}
+                            })
                     i += 1
                     continue
-
+                
                 else:
                     current_text += line[i]
                     i += 1
@@ -169,11 +213,6 @@ class NotionSummaryWriter:
             # 残りのテキストを追加
             if current_text:
                 parts.append({"type": "text", "content": current_text, "annotations": {}})
-
-            # 通常のマークダウン要素の処理
-            if line.startswith('# '):
-                # ...existing heading and list processing code...
-                continue
 
             # パーツから段落ブロックを作成
             if parts:
@@ -194,16 +233,6 @@ class NotionSummaryWriter:
                         ]
                     }
                 })
-
-        # 未完了の数式ブロックを処理
-        if current_math:
-            blocks.append({
-                "object": "block",
-                "type": "equation",
-                "equation": {
-                    "expression": '\n'.join(current_math)
-                }
-            })
 
         return blocks
 
