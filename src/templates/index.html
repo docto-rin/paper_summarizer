@@ -122,10 +122,15 @@
         .mode-toggle input[type="radio"] {
             margin-right: 8px;
         }
+        .token-info {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #a0a0a0;
+        }
     </style>
 </head>
 <body>
-    <h1>論文要約ツール</h1>
+    <h1>論文要約ツール（現在、実装変更中）</h1>
     <p>PDFファイルをアップロードして論文をAI要約し、Notionに保存します。</p>
 
     <!-- モデル選択部分 -->
@@ -172,6 +177,22 @@
                 </div>
             </div>
             
+            <!-- PDF処理モード選択を追加 -->
+            <div class="summary-mode">
+                <h3>PDF処理モード</h3>
+                <div class="mode-toggle">
+                    <input type="radio" id="mode-text" name="pdf_mode" value="text" checked>
+                    <label for="mode-text">テキストのみ（高速）</label>
+                    
+                    <input type="radio" id="mode-full" name="pdf_mode" value="full">
+                    <label for="mode-full">PDF全体（画像含む）</label>
+                </div>
+                <div class="mode-info" style="margin-top: 10px; font-size: 0.9em; color: #a0a0a0;">
+                    ※ テキストのみモードは処理が早く、基本的な要約に適しています。<br>
+                    ※ PDF全体モードは図表の参照や詳細な分析が必要な場合に使用してください。
+                </div>
+            </div>
+            
             <div class="form-row">
                 <input type="file" name="pdf_file" accept=".pdf" required>
             </div>
@@ -179,6 +200,9 @@
             <div class="form-row">
                 <input type="submit" value="要約を開始" class="submit-button" id="submitBtn">
                 <div id="uploadStatus" class="form-status">要約を実行中です...</div>
+                <div id="tokenCount" class="token-info" style="display: none;">
+                    入力トークン数: <span id="tokenValue">-</span>
+                </div>
             </div>
         </form>
     </div>

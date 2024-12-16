@@ -34,8 +34,18 @@
             padding: 15px;
             border-radius: 4px;
         }
-        .success { color: #48bb78; }
-        .error { color: #f56565; }
+        .success { 
+            color: #48bb78;
+            padding: 15px;
+            background-color: rgba(72, 187, 120, 0.1);
+            border-radius: 4px;
+        }
+        .error { 
+            color: #f56565;
+            padding: 15px;
+            background-color: rgba(245, 101, 101, 0.1);
+            border-radius: 4px;
+        }
         a {
             color: #63b3ed;
             text-decoration: none;
@@ -43,13 +53,33 @@
         a:hover {
             text-decoration: underline;
         }
+        .token-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #2d2d2d;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
     <h1>処理結果</h1>
-    <pre {% if "エラー" in output %}class="error"{% else %}class="success"{% endif %}>
-{{ output }}
-    </pre>
+    <pre class="{{ status_class }}">{{ output }}</pre>
+    {% if token_count > 0 %}
+    <div class="token-info">
+        <h3>処理情報</h3>
+        <p>
+            モデル: {{ process_info.model }}<br>
+            要約モード: {{ process_info.summary_mode }}<br>
+            PDF処理モード: {{ process_info.pdf_mode }}<br>
+        </p>
+        <h3>トークン使用状況</h3>
+        <p>
+            タイトル生成: {{ token_info.title }} トークン<br>
+            本文生成: {{ token_info.main_content }} トークン<br>
+            合計: {{ token_count }} トークン
+        </p>
+    </div>
+    {% endif %}
     <a href="/">Back to Home</a>
 </body>
 </html>

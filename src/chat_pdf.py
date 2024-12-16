@@ -3,6 +3,7 @@ import google.generativeai as genai
 from . import config
 import logging
 import re
+from typing import Union, Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,32 @@ def get_model(model_name=None):
         logger.error(f"モデルの初期化に失敗: {e}")
         return None
 
+def get_pdf_content(pdf_path: str, mode: str = "text") -> Union[str, Any]:
+    """
+    PDFの内容を取得（モードに応じて処理方法を変更）
+    
+    Args:
+        pdf_path: PDFファイルのパス
+        mode: 処理モード ("text" or "full")
+    
+    Returns:
+        str: テキストモードの場合は抽出されたテキスト
+        Any: PDF全体モードの場合はGemini File APIのアップロード結果
+    """
+    if mode == "text":
+        # テキストのみモード
+        with open(pdf_path, "rb") as file:
+            reader = PyPDF2.PdfReader(file)
+            text = ""
+            for page_num in range(len(reader.pages)):
+                text += reader.pages[page_num].extract_text()
+        return text
+    else:
+        # PDF全体モード
+        return genai.upload_file(pdf_path)
+
 def read_pdf(file_path):
+    """PDFファイルからテキストを抽出（レガシー）"""
     with open(file_path, "rb") as file:
         reader = PyPDF2.PdfReader(file)
         text = ""
@@ -92,20 +118,34 @@ def extract_sections_from_markdown(text, needed_sections=None):
     
     return sections
 
-def get_summary(pdf_path, model_name=None, summary_mode="concise"):
-    pdf_text = read_pdf(pdf_path)
+def get_summary(pdf_path, model_name=None, summary_mode="concise", pdf_mode="text"):
     model = get_model(model_name)
     if not model:
         return None
 
     try:
+        pdf_content = get_pdf_content(pdf_path, pdf_mode)
         sections = {}
         
+        # トークンカウント用のヘルパー関数を追加
+        def count_input_tokens(content_list):
+            count_response = model.count_tokens(content_list)
+            # CountTokensResponseオブジェクトから整数値を取得
+            return count_response.total_tokens
+
         # まずタイトルだけを取得（最大5回試行）
         for attempt in range(5):
             try:
                 title_prompt = create_prompt(sections_to_generate=["Name"], is_title_only=True)
-                title_response = model.generate_content(pdf_text + "\n" + title_prompt)
+                # トークン数をカウント
+                title_tokens = count_input_tokens([pdf_content, title_prompt])
+                logger.info(f"Title generation input tokens: {title_tokens}")
+                
+                # トークン数をカウント
+                token_count = model.count_tokens([pdf_content, title_prompt])
+                logger.info(f"Title generation input tokens: {token_count}")
+                
+                title_response = model.generate_content([pdf_content, title_prompt])
                 title_sections = extract_sections_from_markdown(title_response.text, needed_sections=["Name"])
                 
                 if title_sections and "Name" in title_sections:
@@ -129,7 +169,11 @@ def get_summary(pdf_path, model_name=None, summary_mode="concise"):
 
         # メインの要約を取得
         main_prompt = create_prompt(needed_sections)
-        main_response = model.generate_content(pdf_text + "\n" + main_prompt)
+        # トークン数をカウント
+        main_tokens = count_input_tokens([pdf_content, main_prompt])
+        logger.info(f"Main content generation input tokens: {main_tokens}")
+        
+        main_response = model.generate_content([pdf_content, main_prompt])
         main_sections = extract_sections_from_markdown(main_response.text, needed_sections)
         
         if main_sections:
@@ -152,7 +196,7 @@ def get_summary(pdf_path, model_name=None, summary_mode="concise"):
                 for attempt in range(max_attempts):
                     try:
                         section_prompt = create_prompt([missing_section])
-                        response = model.generate_content(pdf_text + "\n" + section_prompt)
+                        response = model.generate_content([pdf_content, section_prompt])
                         section_result = extract_sections_from_markdown(
                             response.text, 
                             needed_sections=[missing_section]
@@ -166,6 +210,14 @@ def get_summary(pdf_path, model_name=None, summary_mode="concise"):
                             logger.warning(f"セクション {missing_section} の再取得に失敗 (試行 {attempt + 1}/{max_attempts})")
                     except Exception as e:
                         logger.warning(f"セクション {missing_section} の生成エラー (試行 {attempt + 1}/{max_attempts}): {e}")
+
+        # トークン数情報を追加
+        sections['_debug_info'] = {
+            'token_counts': {
+                'title': title_tokens,
+                'main_content': main_tokens
+            }
+        }
 
         # 必須セクションが揃っているか最終確認
         final_missing = {

@@ -43,7 +43,8 @@ async def upload_pdf(
     request: Request,
     pdf_file: UploadFile = File(...),
     model_name: str = Form(None),
-    summary_mode: str = Form("concise")  # デフォルトは簡潔モード
+    summary_mode: str = Form("concise"),
+    pdf_mode: str = Form("text")  # デフォルトはテキストのみ
 ):
     try:
         file_location = f"src/papers/{pdf_file.filename}"
@@ -52,25 +53,54 @@ async def upload_pdf(
         
         logger.info(f"PDFファイルを保存: {file_location}")
         
-        # モード指定を追加して要約を実行
-        result = add_summary2notion(file_location, model_name, summary_mode)
-        logger.info(f"Notionへの追加結果: {result}")
+        result = add_summary2notion(file_location, model_name, summary_mode, pdf_mode)
         
-        if result is None:  # 要約生成失敗
+        if result is None:
             output = "要約の生成に失敗しました。Geminiのエラーを確認してください。"
-        elif result is True:  # 完全に成功
+            status_class = "error"
+            token_info = {}
+            process_info = {}
+        elif not result.get("success"):
+            output = f"エラーが発生しました: {result.get('error', '不明なエラー')}"
+            status_class = "error"
+            token_info = {}
+            process_info = {}
+        else:
             output = "要約の生成とNotionへの追加が完了しました。"
-        else:  # Notionへの追加失敗
-            output = "要約の生成は完了しましたが、Notionへの追加に失敗しました。"
+            status_class = "success"
+            token_info = result.get("token_info", {})
+            process_info = result.get("process_info", {})
         
         os.remove(file_location)
         logger.info(f"一時ファイルを削除: {file_location}")
         
+        total_tokens = sum(token_info.values()) if token_info else 0
+        
+        return templates.TemplateResponse(
+            "result.html",
+            {
+                "request": request,
+                "output": output,
+                "status_class": status_class,
+                "token_count": total_tokens,
+                "token_info": token_info,
+                "process_info": process_info
+            }
+        )
+        
     except Exception as e:
         logger.error(f"エラーが発生しました: {str(e)}")
-        output = f"エラーが発生しました: {str(e)}"
-    
-    return templates.TemplateResponse("result.html", {"request": request, "output": output})
+        return templates.TemplateResponse(
+            "result.html",
+            {
+                "request": request,
+                "output": f"エラーが発生しました: {str(e)}",
+                "status_class": "error",
+                "token_count": 0,
+                "token_info": {},
+                "process_info": {}
+            }
+        )
 
 # /initialize-dbエンドポイントは残しておく（APIとして利用可能）
 @app.post("/initialize-db")

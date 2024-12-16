@@ -249,27 +249,43 @@ class NotionSummaryWriter:
             "children": blocks
         }
 
-    def add_summary(self, pdf_path: str, model_name: Optional[str] = None, summary_mode: str = "concise") -> Optional[bool]:
-        """
-        PDFの要約をNotionに追加
-        Returns:
-            None: 要約生成失敗
-            True: 完全成功
-            False: Notion追加失敗
-        """
+    def add_summary(self, pdf_path: str, model_name: Optional[str] = None, 
+                   summary_mode: str = "concise", pdf_mode: str = "text") -> Optional[Dict]:
         try:
-            logger.info(f"PDFの要約を開始: {pdf_path}, モデル: {model_name or 'デフォルト'}, モード: {summary_mode}")
-            sections = get_summary(pdf_path, model_name, summary_mode)
+            logger.info(f"PDFの要約を開始: {pdf_path}, モデル: {model_name or 'デフォルト'}, "
+                       f"モード: {summary_mode}, PDF処理: {pdf_mode}")
             
+            sections = get_summary(pdf_path, model_name, summary_mode, pdf_mode)
             if sections is None:
-                logger.error("要約の生成に失敗しました")
                 return None
-            
-            # プロパティの作成（database_property: Trueの項目はデータベースにも表示）
-            properties = self._create_notion_properties(sections)
-            
-            # ブロックを作成（目次から始める）
+
+            # プロセス情報ブロックを作成
+            process_info = {
+                "object": "block",
+                "type": "callout",
+                "callout": {
+                    "icon": {"emoji": "ℹ️"},
+                    "rich_text": [{
+                        "type": "text",
+                        "text": {
+                            "content": f"""処理情報:
+• モデル: {model_name or 'デフォルト (gemini-1.5-flash-002)'}
+• 要約モード: {summary_mode}
+• PDF処理モード: {pdf_mode}
+• 入力トークン数:
+  - タイトル生成: {sections['_debug_info']['token_counts']['title']:,}
+  - 本文生成: {sections['_debug_info']['token_counts']['main_content']:,}
+  - 合計: {sum(sections['_debug_info']['token_counts'].values()):,}"""
+                        }
+                    }],
+                    "color": "gray_background"
+                }
+            }
+
+            # ...existing property creation code...
+
             all_blocks = [
+                process_info,  # 処理情報を最初に追加
                 {
                     "object": "block",
                     "type": "table_of_contents",
@@ -281,10 +297,10 @@ class NotionSummaryWriter:
                     "divider": {}
                 }
             ]
-            
-            # 各セクションのコンテンツをブロックとして追加
+
+            # セクションのコンテンツをブロックとして追加
             for column, content in sections.items():
-                if column != "Keywords" and column != "Name":
+                if column != "Keywords" and column != "Name" and column != "_debug_info":
                     all_blocks.extend([
                         {
                             "object": "block",
@@ -299,36 +315,61 @@ class NotionSummaryWriter:
                         }
                     ])
 
-            # 100ブロックごとに分割して保存
-            MAX_BLOCKS = 90  # 余裕を持って90に設定
-            block_chunks = [all_blocks[i:i + MAX_BLOCKS] for i in range(0, len(all_blocks), MAX_BLOCKS)]
-            
-            # メインページを作成
-            main_page = {
-                "parent": {"database_id": self.database_id},
-                "properties": properties,
-                "children": block_chunks[0] if block_chunks else []
-            }
-            
-            main_response = self.notion.pages.create(**main_page)
-            main_page_id = main_response["id"]
-            
-            # 残りのブロックがあれば、メインページに追加
-            for chunk in block_chunks[1:]:
-                self.notion.blocks.children.append(block_id=main_page_id, children=chunk)
+            # プロパティの作成
+            properties = self._create_notion_properties(sections)
 
-            logger.info("Notionページの作成に成功しました")
-            return True
+            # メインページを作成
+            try:
+                # 100ブロックごとに分割して保存
+                MAX_BLOCKS = 90  # 余裕を持って90に設定
+                block_chunks = [all_blocks[i:i + MAX_BLOCKS] for i in range(0, len(all_blocks), MAX_BLOCKS)]
+                
+                # メインページを作成
+                main_page = {
+                    "parent": {"database_id": self.database_id},
+                    "properties": properties,
+                    "children": block_chunks[0] if block_chunks else []
+                }
+                
+                main_response = self.notion.pages.create(**main_page)
+                main_page_id = main_response["id"]
+                logger.info(f"Notionページを作成: {main_page_id}")
+                
+                # 残りのブロックがあれば、メインページに追加
+                for chunk in block_chunks[1:]:
+                    self.notion.blocks.children.append(block_id=main_page_id, children=chunk)
+                    logger.info(f"追加ブロックを追加: {len(chunk)} ブロック")
+
+                return {
+                    "success": True,
+                    "token_info": sections.get('_debug_info', {}).get('token_counts', {}),
+                    "process_info": {
+                        "model": model_name or 'デフォルト',
+                        "summary_mode": summary_mode,
+                        "pdf_mode": pdf_mode
+                    }
+                }
+
+            except Exception as notion_error:
+                logger.error(f"Notionページの作成に失敗: {notion_error}")
+                return {
+                    "success": False,
+                    "error": f"Notionページの作成に失敗: {str(notion_error)}"
+                }
 
         except Exception as e:
             logger.error(f"予期せぬエラーが発生: {e}")
-            return False
+            return {
+                "success": False,
+                "error": str(e)
+            }
 
-def add_summary2notion(pdf_path: str, model_name: Optional[str] = None, summary_mode: str = "concise") -> Optional[bool]:
+def add_summary2notion(pdf_path: str, model_name: Optional[str] = None, 
+                      summary_mode: str = "concise", pdf_mode: str = "text") -> Optional[Dict]:
     """レガシー互換性のための関数"""
     from . import config
     writer = NotionSummaryWriter(config)
-    return writer.add_summary(pdf_path, model_name, summary_mode)
+    return writer.add_summary(pdf_path, model_name, summary_mode, pdf_mode)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="論文要約をNotionに追加")
