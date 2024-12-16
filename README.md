@@ -17,7 +17,7 @@ A tool to automatically summarize academic papers and save summaries to Notion.
 ## Features
 - Automatic summarization of PDF papers
 - Save summaries to specified Notion database
-- Powered by Google Gemini Pro / Gemini 1.5 Flash
+- Powered by Google Gemini 1.5 Pro / Gemini 1.5 Flash
 - Japanese summary output for English papers
 
 ## Setup
@@ -77,7 +77,7 @@ Access http://127.0.0.1:8000 to start using the tool
 
 ## Usage
 1. Access web interface
-2. Select model (Gemini Pro or Gemini 1.5 Flash)
+2. Select model (Gemini 1.5 Pro or Gemini 1.5 Flash)
 3. Upload PDF file
 4. Click "Start Summary"
 5. Results will be saved to your Notion database
@@ -141,7 +141,7 @@ PDFファイルをアップロードして論文を自動要約し、Notionに�
 ## 機能
 - PDFファイル形式の論文を自動要約
 - 要約結果をNotion上の指定データベースに自動保存
-- Google Gemini Pro / Gemini 1.5 Flash による要約生成
+- Google Gemini 1.5 Pro / Gemini 1.5 Flash による要約生成
 - 英語論文を日本語で要約
 
 ## セットアップ手順
@@ -201,7 +201,7 @@ uvicorn src.main:app --reload
 
 ## 使用方法
 1. Webインターフェースにアクセス
-2. 使用するモデルを選択（Gemini Pro または Gemini 1.5 Flash）
+2. 使用するモデルを選択（Gemini 1.5 Pro または Gemini 1.5 Flash）
 3. PDFファイルをアップロード
 4. 「要約を開始」をクリック
 5. 処理完了後、Notionデータベースに要約結果が保存される
