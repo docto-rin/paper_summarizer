@@ -74,9 +74,10 @@
         </p>
         <h3>トークン使用状況</h3>
         <p>
-            タイトル生成: {{ token_info.title }} トークン<br>
-            本文生成: {{ token_info.main_content }} トークン<br>
-            合計: {{ token_count }} トークン
+            入力トークン数: {{ token_count }} トークン<br>
+            {% if token_info.main_content %}
+            （内訳: 本文生成 {{ token_info.main_content }} トークン）
+            {% endif %}
         </p>
     </div>
     {% endif %}

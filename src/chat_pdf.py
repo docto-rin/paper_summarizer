@@ -126,58 +126,53 @@ def get_summary(pdf_path, model_name=None, summary_mode="concise", pdf_mode="tex
     try:
         pdf_content = get_pdf_content(pdf_path, pdf_mode)
         sections = {}
+        token_counts = {}
         
-        # トークンカウント用のヘルパー関数を追加
+        # トークンカウント用のヘルパー関数
         def count_input_tokens(content_list):
             count_response = model.count_tokens(content_list)
-            # CountTokensResponseオブジェクトから整数値を取得
             return count_response.total_tokens
 
-        # まずタイトルだけを取得（最大5回試行）
-        for attempt in range(5):
-            try:
-                title_prompt = create_prompt(sections_to_generate=["Name"], is_title_only=True)
-                # トークン数をカウント
-                title_tokens = count_input_tokens([pdf_content, title_prompt])
-                logger.info(f"Title generation input tokens: {title_tokens}")
-                
-                # トークン数をカウント
-                token_count = model.count_tokens([pdf_content, title_prompt])
-                logger.info(f"Title generation input tokens: {token_count}")
-                
-                title_response = model.generate_content([pdf_content, title_prompt])
-                title_sections = extract_sections_from_markdown(title_response.text, needed_sections=["Name"])
-                
-                if title_sections and "Name" in title_sections:
-                    sections.update(title_sections)
-                    logger.info("タイトルの取得に成功しました")
-                    break
-                    
-                logger.warning(f"タイトルの取得に失敗 (試行 {attempt + 1}/5)")
-            except Exception as e:
-                logger.warning(f"タイトル生成エラー (試行 {attempt + 1}/5): {e}")
-        
-        if "Name" not in sections:
-            logger.error("論文タイトルの取得に失敗しました")
-            return None
-
-        # 必要なセクションを特定（タイトルを除く）
+        # 必要なセクションを特定
         needed_sections = {
             name for name, cfg in config.column_configs.items()
-            if (summary_mode == "detailed" or cfg.get("required", False)) and name != "Name"
+            if (summary_mode == "detailed" or cfg.get("required", False))
         }
 
-        # メインの要約を取得
-        main_prompt = create_prompt(needed_sections)
-        # トークン数をカウント
-        main_tokens = count_input_tokens([pdf_content, main_prompt])
-        logger.info(f"Main content generation input tokens: {main_tokens}")
-        
-        main_response = model.generate_content([pdf_content, main_prompt])
-        main_sections = extract_sections_from_markdown(main_response.text, needed_sections)
-        
-        if main_sections:
-            sections.update(main_sections)
+        # process_first フラグのあるセクションを先に処理
+        priority_sections = {
+            name for name in needed_sections 
+            if config.column_configs[name].get("process_first", False)
+        }
+        regular_sections = needed_sections - priority_sections
+
+        # 優先セクションの処理
+        for section in priority_sections:
+            prompt = create_prompt([section])
+            tokens = count_input_tokens([pdf_content, prompt])
+            # トークンカウントのキーを修正
+            token_counts["name" if section == "Name" else section.lower()] = tokens
+            
+            response = model.generate_content([pdf_content, prompt])
+            result = extract_sections_from_markdown(response.text, [section])
+            
+            if result and section in result:
+                sections[section] = result[section]
+            else:
+                logger.error(f"優先セクション {section} の取得に失敗")
+                return None
+
+        # 残りのセクションを一括処理
+        if regular_sections:
+            main_prompt = create_prompt(regular_sections)
+            main_tokens = count_input_tokens([pdf_content, main_prompt])
+            token_counts["main_content"] = main_tokens
+            
+            main_response = model.generate_content([pdf_content, main_prompt])
+            main_sections = extract_sections_from_markdown(main_response.text, regular_sections)
+            
+            if main_sections:
+                sections.update(main_sections)
 
         # 不足しているセクションを特定
         missing_sections = needed_sections - set(sections.keys())
@@ -213,15 +208,12 @@ def get_summary(pdf_path, model_name=None, summary_mode="concise", pdf_mode="tex
 
         # トークン数情報を追加
         sections['_debug_info'] = {
-            'token_counts': {
-                'title': title_tokens,
-                'main_content': main_tokens
-            }
+            'token_counts': token_counts
         }
 
-        # 必須セクションが揃っているか最終確認
+        # 必須セクションの確認
         final_missing = {
-            name for name in needed_sections | {"Name"}
+            name for name in needed_sections
             if name not in sections and config.column_configs[name].get("required", False)
         }
         

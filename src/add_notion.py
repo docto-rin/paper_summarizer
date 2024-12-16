@@ -260,6 +260,7 @@ class NotionSummaryWriter:
                 return None
 
             # プロセス情報ブロックを作成
+            token_counts = sections['_debug_info']['token_counts']
             process_info = {
                 "object": "block",
                 "type": "callout",
@@ -272,20 +273,24 @@ class NotionSummaryWriter:
 • モデル: {model_name or 'デフォルト (gemini-1.5-flash-002)'}
 • 要約モード: {summary_mode}
 • PDF処理モード: {pdf_mode}
-• 入力トークン数:
-  - タイトル生成: {sections['_debug_info']['token_counts']['title']:,}
-  - 本文生成: {sections['_debug_info']['token_counts']['main_content']:,}
-  - 合計: {sum(sections['_debug_info']['token_counts'].values()):,}"""
+• 入力トークン数: {sum(token_counts.values()):,}"""
                         }
                     }],
                     "color": "gray_background"
                 }
             }
 
-            # ...existing property creation code...
+            # プロパティの作成を先に実行
+            properties = self._create_notion_properties(sections)
+            if not properties.get("Name"):  # タイトルプロパティがない場合
+                properties["Name"] = {
+                    "title": [{"text": {"content": "Untitled"}}]
+                }
 
-            all_blocks = [
-                process_info,  # 処理情報を最初に追加
+            # ブロック作成
+            all_blocks = [process_info]
+
+            all_blocks.extend([
                 {
                     "object": "block",
                     "type": "table_of_contents",
@@ -296,7 +301,7 @@ class NotionSummaryWriter:
                     "type": "divider",
                     "divider": {}
                 }
-            ]
+            ])
 
             # セクションのコンテンツをブロックとして追加
             for column, content in sections.items():
@@ -342,7 +347,10 @@ class NotionSummaryWriter:
 
                 return {
                     "success": True,
-                    "token_info": sections.get('_debug_info', {}).get('token_counts', {}),
+                    "token_info": {
+                        "total": sum(token_counts.values()),
+                        "main_content": token_counts.get("main_content", 0)
+                    },
                     "process_info": {
                         "model": model_name or 'デフォルト',
                         "summary_mode": summary_mode,

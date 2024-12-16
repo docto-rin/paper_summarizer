@@ -17,10 +17,26 @@ if not all([GOOGLE_API_KEY, NOTION_API_KEY, database_id]):
 # 列名、プロンプト、Notionデータ型の定義
 column_configs = {
     "Name": {
-        "prompt": "論文のタイトルを以下の形式で。英語原文タイトル（日本語訳）",
+        "prompt": """Extract the paper title and translate it to Japanese.
+Output in the following format only, nothing else:
+
+## Name
+[Original English Title] ([Japanese Translation])
+
+Example:
+## Name
+Attention Is All You Need (注意機構がすべて)
+
+Rules:
+1. Keep the original English title exactly as written in the paper
+2. Japanese translation should be in parentheses
+3. Do not include any other information
+4. Do not include paper authors, dates, or other metadata
+5. Must start with '## Name'""",
         "notion_type": "title",
-        "database_property": True,  # データベースの列として追加
-        "required": True  # 必須項目
+        "database_property": True,
+        "required": True,
+        "process_first": True  # タイトルを最初に処理することを示すフラグ
     },
     "どんな研究？": {
         "prompt": "この研究は何を目的とし、どのような成果を上げたのか",
