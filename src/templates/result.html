@@ -74,10 +74,15 @@
         </p>
         <h3>トークン使用状況</h3>
         <p>
-            入力トークン数: {{ token_count }} トークン<br>
-            {% if token_info.main_content %}
-            （内訳: 本文生成 {{ token_info.main_content }} トークン）
-            {% endif %}
+            <strong>実際の入力トークン数: {{ token_info.total_input }} トークン</strong><br>
+            <small style="color: #888;">
+                （内訳）<br>
+                • PDF本文: {{ token_info.pdf_content }} トークン<br>
+                • プロンプト: {{ token_info.prompt }} トークン<br>
+                <br>
+                ※ 実際の入力トークン数は、PDFとプロンプトを<br>
+                　組み合わせた際の最終的なトークン数です。
+            </small>
         </p>
     </div>
     {% endif %}

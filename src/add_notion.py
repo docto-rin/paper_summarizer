@@ -261,6 +261,10 @@ class NotionSummaryWriter:
 
             # プロセス情報ブロックを作成
             token_counts = sections['_debug_info']['token_counts']
+            pdf_content_tokens = token_counts.get('pdf_content', 0)
+            prompt_tokens = token_counts.get('prompt', 0)
+            total_input_tokens = token_counts.get('total_input', 0)
+
             process_info = {
                 "object": "block",
                 "type": "callout",
@@ -273,7 +277,11 @@ class NotionSummaryWriter:
 • モデル: {model_name or 'デフォルト (gemini-1.5-flash-002)'}
 • 要約モード: {summary_mode}
 • PDF処理モード: {pdf_mode}
-• 入力トークン数: {sum(token_counts.values()):,}"""
+• トークン使用状況:
+  - PDF本文: {pdf_content_tokens:,} トークン
+  - プロンプト: {prompt_tokens:,} トークン
+  - 実際の入力トークン数: {total_input_tokens:,} トークン
+  (注: 実際の入力トークン数はPDFとプロンプトを組み合わせた際の最終的なトークン数です)"""
                         }
                     }],
                     "color": "gray_background"
@@ -348,8 +356,9 @@ class NotionSummaryWriter:
                 return {
                     "success": True,
                     "token_info": {
-                        "total": sum(token_counts.values()),
-                        "main_content": token_counts.get("main_content", 0)
+                        "pdf_content": pdf_content_tokens,
+                        "prompt": prompt_tokens,
+                        "total_input": total_input_tokens
                     },
                     "process_info": {
                         "model": model_name or 'デフォルト',

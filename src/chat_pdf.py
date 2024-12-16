@@ -206,6 +206,24 @@ def get_summary(pdf_path, model_name=None, summary_mode="concise", pdf_mode="tex
                     except Exception as e:
                         logger.warning(f"セクション {missing_section} の生成エラー (試行 {attempt + 1}/{max_attempts}): {e}")
 
+        # PDFのトークン数を計算
+        pdf_tokens = count_input_tokens([pdf_content])
+        token_counts = {'pdf_content': pdf_tokens}
+
+        # プロンプトの生成と合計トークン数の計算
+        all_prompts = create_prompt(needed_sections)
+        prompt_tokens = count_input_tokens([all_prompts])
+        token_counts['prompt'] = prompt_tokens
+
+        # 実際の入力トークン数（PDF + プロンプト）を計算
+        combined_input = count_input_tokens([pdf_content, all_prompts])
+        token_counts['total_input'] = combined_input
+
+        logger.info(f"""トークン数の内訳:
+        PDF本文: {pdf_tokens}
+        プロンプト: {prompt_tokens}
+        合計入力: {combined_input}""")
+
         # トークン数情報を追加
         sections['_debug_info'] = {
             'token_counts': token_counts
