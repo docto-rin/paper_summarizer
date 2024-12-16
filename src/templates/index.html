@@ -217,15 +217,28 @@
             // 選択されたカードをハイライト
             element.classList.add('selected');
             
-            // 選択されたモデルを設定
+            // 選択されたモデルを全ての関連フィールドに設定
             document.getElementById('shared-model').value = modelName;
             document.getElementById('pdf-model').value = modelName;
+            
+            // フォーム内のhidden inputも更新
+            document.querySelectorAll('input[name="model_name"]').forEach(input => {
+                input.value = modelName;
+            });
         }
 
         // フォーム送信時の処理
         document.getElementById('uploadForm').addEventListener('submit', function(e) {
             const submitBtn = document.getElementById('submitBtn');
             const statusDiv = document.getElementById('uploadStatus');
+            
+            // 選択されているモデルを確実にフォームに反映
+            const selectedModel = document.querySelector('.model-card.selected');
+            if (selectedModel) {
+                const modelName = selectedModel.id === 'card-gemini-pro' ? 
+                    'gemini-1.5-pro-002' : 'gemini-1.5-flash-002';
+                document.getElementById('pdf-model').value = modelName;
+            }
             
             submitBtn.classList.add('loading');
             submitBtn.disabled = true;

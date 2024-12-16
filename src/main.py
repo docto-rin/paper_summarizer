@@ -47,6 +47,13 @@ async def upload_pdf(
     pdf_mode: str = Form("text")  # デフォルトはテキストのみ
 ):
     try:
+        # モデル名のバリデーション
+        valid_models = ["gemini-1.5-pro-002", "gemini-1.5-flash-002"]
+        if not model_name or model_name not in valid_models:
+            model_name = config.GOOGLE_MODEL
+        
+        logger.info(f"選択されたモデル: {model_name}")
+        
         file_location = f"src/papers/{pdf_file.filename}"
         with open(file_location, "wb") as file:
             file.write(pdf_file.file.read())
