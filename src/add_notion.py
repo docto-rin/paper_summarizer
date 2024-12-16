@@ -125,7 +125,7 @@ class NotionSummaryWriter:
             i = 0
             while i < len(line):
                 # ディスプレイ数式（$$）
-                if line[i:i+2] == '$$':
+                if i < len(line) - 1 and line[i:i+2] == '$$':
                     if current_text:
                         parts.append({"type": "text", "content": current_text, "annotations": {}})
                     current_text = ""
@@ -143,7 +143,7 @@ class NotionSummaryWriter:
                     continue
                 
                 # 太字かつイタリック (***)
-                elif line[i:i+3] == '***':
+                elif i < len(line) - 2 and line[i:i+3] == '***':
                     if current_text:
                         parts.append({"type": "text", "content": current_text, "annotations": {}})
                     current_text = ""
@@ -162,7 +162,7 @@ class NotionSummaryWriter:
                     continue
                 
                 # 太字 (**)
-                elif line[i:i+2] == '**':
+                elif i < len(line) - 1 and line[i:i+2] == '**':
                     if current_text:
                         parts.append({"type": "text", "content": current_text, "annotations": {}})
                     current_text = ""
@@ -180,29 +180,40 @@ class NotionSummaryWriter:
                     i += 2
                     continue
                 
-                # インライン数式 ($) とイタリック (*)
-                elif line[i] in ['$', '*']:
+                # インライン数式 ($)
+                elif line[i] == '$':
                     if current_text:
                         parts.append({"type": "text", "content": current_text, "annotations": {}})
                     current_text = ""
-                    marker = line[i]
+                    i += 1
+                    math_content = ""
+                    while i < len(line) and line[i] != '$':
+                        math_content += line[i]
+                        i += 1
+                    if math_content:
+                        parts.append({
+                            "type": "equation",
+                            "content": math_content
+                        })
+                    i += 1
+                    continue
+
+                # イタリック (*)
+                elif line[i] == '*':
+                    if current_text:
+                        parts.append({"type": "text", "content": current_text, "annotations": {}})
+                    current_text = ""
                     i += 1
                     content = ""
-                    while i < len(line) and line[i] != marker:
+                    while i < len(line) and line[i] != '*':
                         content += line[i]
                         i += 1
                     if content:
-                        if marker == '$':
-                            parts.append({
-                                "type": "equation",
-                                "content": content
-                            })
-                        else:
-                            parts.append({
-                                "type": "text",
-                                "content": content,
-                                "annotations": {"italic": True}
-                            })
+                        parts.append({
+                            "type": "text",
+                            "content": content,
+                            "annotations": {"italic": True}
+                        })
                     i += 1
                     continue
                 
