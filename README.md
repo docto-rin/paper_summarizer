@@ -20,6 +20,10 @@ A tool to automatically summarize academic papers and save summaries to Notion.
 - Powered by Google Gemini 1.5 Pro / Gemini 1.5 Flash
 - Japanese summary output for English papers
 
+## Requirements
+- Python 3.9
+- Notion database with "Name" column (if your database has a "名前" column, please rename it to "Name")
+
 ## Setup
 
 ### 1. Get Required API Keys
@@ -143,6 +147,11 @@ PDFファイルをアップロードして論文を自動要約し、Notionに�
 - 要約結果をNotion上の指定データベースに自動保存
 - Google Gemini 1.5 Pro / Gemini 1.5 Flash による要約生成
 - 英語論文を日本語で要約
+
+必要要件
+
+- Python 3.9
+- Notionデータベースの初期列名が「Name」であること（「名前」となっている場合は「Name」に変更してください）
 
 ## セットアップ手順
 
