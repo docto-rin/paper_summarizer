@@ -92,6 +92,32 @@ Access http://127.0.0.1:8000 to start using the tool
 - Ensure proper database permissions in Notion
 
 ## Advanced Usage
+### Edit and rename service configuration
+   ```bash
+   # Make a copy of example files
+   cp paper-summarizer.service.example paper-summarizer.service
+   cp start_server.sh.example start_server.sh
+   
+   # Edit the service file to match your environment
+   # - Update User and Group to your username
+   # - Modify WorkingDirectory to match your installation path
+   nano paper-summarizer.service
+   
+   # Edit the start script to match your environment
+   # - Update paths and environment variables as needed
+   nano start_server.sh
+   
+   # Make start script executable
+   chmod +x start_server.sh
+   ```
+
+### Setting up Log Directory
+   ```bash
+   sudo mkdir -p /var/log/paper-summarizer
+   sudo chown -R $USER:$USER /var/log/paper-summarizer
+   sudo chmod 755 /var/log/paper-summarizer
+   ```
+
 ### Running as a System Service
 1. Copy the service file:
    ```bash
@@ -221,6 +247,32 @@ uvicorn src.main:app --reload
 - Notionのデータベース権限設定を確認すること
 
 ## 上級者向け利用方法
+### サービス設定ファイルの編集とリネーム:
+   ```bash
+   # 設定ファイルのコピー
+   cp paper-summarizer.service.example paper-summarizer.service
+   cp start_server.sh.example start_server.sh
+   
+   # サービスファイルを環境に合わせて編集
+   # - UserとGroupを実行ユーザー名に変更
+   # - WorkingDirectoryをインストールパスに合わせる
+   nano paper-summarizer.service
+   
+   # 起動スクリプトを環境に合わせて編集
+   # - パスや環境変数を必要に応じて修正
+   nano start_server.sh
+   
+   # 起動スクリプトに実行権限を付与
+   chmod +x start_server.sh
+   ```
+
+### ログディレクトリの設定
+   ```bash
+   sudo mkdir -p /var/log/paper-summarizer
+   sudo chown -R $USER:$USER /var/log/paper-summarizer
+   sudo chmod 755 /var/log/paper-summarizer
+   ```
+
 ### システムサービスとして実行
 1. サービスファイルをコピー:
    ```bash
