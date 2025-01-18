@@ -100,15 +100,15 @@ class NotionSummaryWriter:
                 continue
             
             # 2. リスト要素の処理（番号付きリストが箇条書きより制限が厳しい）
-            elif line.startswith('1. '):
-                blocks.append({
-                    "object": "block",
-                    "type": "numbered_list_item",
-                    "numbered_list_item": {
-                        "rich_text": [{"text": {"content": line[3:].strip()}}]
-                    }
-                })
-                continue
+            # elif line.startswith('1. '):
+            #     blocks.append({
+            #         "object": "block",
+            #         "type": "numbered_list_item",
+            #         "numbered_list_item": {
+            #             "rich_text": [{"text": {"content": line[3:].strip()}}]
+            #         }
+            #     })
+            #     continue
             elif line.startswith('- ') or line.startswith('* '):
                 blocks.append({
                     "object": "block",
