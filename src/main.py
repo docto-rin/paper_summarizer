@@ -48,7 +48,7 @@ async def upload_pdf(
 ):
     try:
         # モデル名のバリデーション
-        valid_models = ["gemini-1.5-pro-002", "gemini-1.5-flash-002"]
+        valid_models = ["gemini-1.5-pro-002", "gemini-1.5-flash-002", "gemini-2.0-flash-exp"]
         if not model_name or model_name not in valid_models:
             model_name = config.GOOGLE_MODEL
         
