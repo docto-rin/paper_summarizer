@@ -157,6 +157,16 @@
                     • 大量のテキストを効率的に処理
                 </div>
             </div>
+            <div class="model-card {% if default_model == 'gemini-2.0-flash-exp' %}selected{% endif %}" 
+                 onclick="selectModel('gemini-2.0-flash-exp', this)" 
+                 id="card-gemini-exp">
+                <div class="model-name">Gemini 2.0 Flash</div>
+                <div class="model-description">
+                    • Geminiの最新モデル<br>
+                    • 全体的に性能が良いらしい<br>
+                    • ただしまだ試験運用版
+                </div>
+            </div>
         </div>
         <input type="hidden" id="shared-model" value="{{ default_model }}">
         <input type="hidden" name="model_name" id="pdf-model" value="{{ default_model }}">
@@ -235,8 +245,14 @@
             // 選択されているモデルを確実にフォームに反映
             const selectedModel = document.querySelector('.model-card.selected');
             if (selectedModel) {
-                const modelName = selectedModel.id === 'card-gemini-pro' ? 
-                    'gemini-1.5-pro-002' : 'gemini-1.5-flash-002';
+                let modelName;
+                if (selectedModel.id === 'card-gemini-pro') {
+                    modelName = 'gemini-1.5-pro-002';
+                } else if (selectedModel.id === 'card-gemini-flash') {
+                    modelName = 'gemini-1.5-flash-002';
+                } else if (selectedModel.id === 'card-gemini-exp') {
+                    modelName = 'gemini-2.0-flash-exp';
+                }
                 document.getElementById('pdf-model').value = modelName;
             }
             
